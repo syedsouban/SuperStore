@@ -108,10 +108,11 @@ def logout(user_id,email):
         fields.success: False,
         fields.message: " "
     }
-    if not request.get(fields.SESSION_ID):
+    
+    if not request.headers.get(fields.SESSION_ID):
         response[fields.message] = "Some of the header fields are missing"
     else:
-        session_id = request[fields.SESSION_ID]
+        session_id = request.headers.get(fields.SESSION_ID)
         update_res = update_session_id(session_id)
         if update_res.get("nModified", 0) >= 1:
             response[fields.success] = True
