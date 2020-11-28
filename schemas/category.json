@@ -1,0 +1,36 @@
+{
+    "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["english_name", "arabic_name", "english_tagline", "arabic_tagline", "english_description", "arabic_description", "image_url", "discount"],
+        "properties": {
+            "english_name": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "arabic_name": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "english_tagline": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "arabic_tagline": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "english_description": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "arabic_description": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "image_url": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            }
+        }
+    }
+}

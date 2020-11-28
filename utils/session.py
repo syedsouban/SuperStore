@@ -3,6 +3,24 @@ from app import app
 from utils.time import get_time_after
 import uuid
 from constants import fields
+from functools import wraps
+from flask import abort,request
+
+def authorize(f):
+    @wraps(f)
+    def decorated_function(*args, **kws):
+            if not fields.SESSION_ID in request.headers:
+               abort(401)
+            try:
+                session_id = request.headers.get(fields.SESSION_ID)
+                user_session = get_active_session_by_id(session_id)
+                if not user_session:
+                    abort(401)
+            except:
+                abort(401)
+
+            return f(user_session[fields.user_id],user_session[fields.email], *args, **kws)
+    return decorated_function
 
 def update_session_id(session_id):
     return app.mongo.db.user_sessions.update(
@@ -65,7 +83,7 @@ def create_new_session(user_id,email):
     user_session = {
         fields.user_id: user_id,
         fields.session_id: session_id,
-        fields.expiry_date: get_time_after(hours=0, minutes=10),
+        fields.expiry_date: get_time_after(hours=12, minutes=0),
         fields.email:email,
         fields.is_active:True
     }

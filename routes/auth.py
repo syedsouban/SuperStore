@@ -1,17 +1,35 @@
 import uuid
-from utils.session import create_new_session, get_active_session_by_id, get_active_sessions_by_user_id, update_session_id
-from utils.user import get_user_by_email, get_users_by_token_and_email, get_verified_users_by_id, update_email_verify_status, update_password_by_id, update_token
 from app import app
+from utils.user import get_user_by_email, get_users_by_token_and_email, get_verified_users_by_id, update_email_verify_status, update_password_by_id, update_token
 from flask import request, jsonify
 from models.user import User
 from bson import json_util
 import json
-from functools import wraps
-from flask import abort
+
 from utils.mail import send_password_reset_mail, send_verification_mail
 from flask import request
 import re
 from constants import fields
+from functools import wraps
+from flask import abort,request
+from constants import fields
+
+def authorize(f):
+    @wraps(f)
+    def decorated_function(*args, **kws):
+            if not fields.SESSION_ID in request.headers:
+               abort(401)
+            try:
+                session_id = request.headers.get(fields.SESSION_ID)
+                user_session = get_active_session_by_id(session_id)
+                if not user_session:
+                    abort(401)
+            except:
+                abort(401)
+
+            return f(user_session[fields.user_id],user_session[fields.email], *args, **kws)
+    return decorated_function
+
 
 def is_strong(password):
     return re.match(r"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$", password)
@@ -80,21 +98,7 @@ def login():
     return jsonify(response)
 
 
-def authorize(f):
-    @wraps(f)
-    def decorated_function(*args, **kws):
-            if not fields.SESSION_ID in request.headers:
-               abort(401)
-            try:
-                session_id = request.headers.get(fields.SESSION_ID)
-                user_session = get_active_session_by_id(session_id)
-                if not user_session:
-                    abort(401)
-            except:
-                abort(401)
 
-            return f(user_session[fields.user_id],user_session[fields.email], *args, **kws)
-    return decorated_function
 
 
 @app.route("/logout")
@@ -221,3 +225,4 @@ def hashcode(email,token):
             """
     else:
         return "Password recovery email expired!"
+from utils.session import create_new_session, get_active_sessions_by_user_id, update_session_id,get_active_session_by_id

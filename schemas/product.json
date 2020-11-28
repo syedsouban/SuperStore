@@ -1,0 +1,101 @@
+{
+    "$jsonSchema": {
+        "bsonType": "object",
+        "required": [
+            "english_name",
+            "arabic_name",
+            "english_description",
+            "arabic_description",
+            "image_url",
+            "category_id",
+            "seller_id",
+            "price",
+            "tags",
+            "status"
+        ],
+        "properties": {
+            "english_name": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "arabic_name": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "english_description": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "arabic_description": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "image_url": {
+                "bsonType": "string",
+                "description": "must be a string and is required"
+            },
+            "category_id": {
+                "bsonType": "objectId",
+                "description": "must be a string and is required"
+            },
+            "seller_id": {
+                "bsonType": "objectId",
+                "description": "must be a string and is required"
+            },
+            "price": {
+                "bsonType": "double",
+                "description": "must be a double and is required"
+            },
+            "FAQs_arabic": {
+                "bsonType": "array",
+                "description": "must be an array",
+                "items": {
+                    "bsonType": "string"
+                }
+            },
+            "FAQs_english": {
+                "bsonType": "array",
+                "description": "must be an array",
+                "items": {
+                    "bsonType": "string"
+                }
+            },
+            "tags": {
+                "bsonType": "array",
+                "description": "must be an array and is required",
+                "items": {
+                    "bsonType": "string"
+                }
+            },
+            "status": {
+                "enum": ["in_edit", "edited", "published"],
+                "description": "can only be one of the enum values and is required"
+            },
+            "reviews": {
+                "bsonType": [
+                    "array"
+                ],
+                "items": {
+                    "bsonType": "object",
+                    "required": [
+                        "user_id",
+                        "stars"
+                    ],
+                    "properties": {
+                        "user_id": {
+                            "bsonType": "objectId",
+                            "description": "must be a objectId and is required"
+                        },
+                        "stars": {
+                            "bsonType": "int",
+                            "minimum": 1,
+                            "maximum": 5,
+                            "description": "must be a number and is required"
+                        }
+                    }
+                },
+                "description": "must be a array of objects containing user_id and stars"
+            }
+        }
+    }
+}

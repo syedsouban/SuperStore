@@ -1,5 +1,5 @@
 from bson import ObjectId
-from app import app
+
 from datetime import datetime
 from constants import fields
 
@@ -82,4 +82,4 @@ def update_password_by_id(user_id,new_password_hash):
                                         }
                                     }
                                     )
-            
+from app import app
