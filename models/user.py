@@ -1,17 +1,21 @@
+from app import db
 from werkzeug.security import check_password_hash, generate_password_hash as generate_password_hash_
-from app import app
 from utils.time import get_time_after
 from datetime import datetime
 import uuid
 
-class User():
+class Users(db.DynamicDocument):
+    
+    email = db.EmailField(required = True,unique =True)
+    created_at = db.DateTimeField(required = True)
+    email_verified = db.BooleanField(required=True)
+    verification_token = db.StringField(required = True)
+    verification_token_expiry = db.DateTimeField(required = True)
+    password_hash = db.StringField(required = True)
 
-    def __init__(self, email, password):
-        self.email = email
-        self.password_hash = generate_password_hash_(password)
-        self.created_at = datetime.now()
-        self.email_verified = False
-        self.verification_token,self.verification_token_expiry = User.create_token()
+    @staticmethod
+    def create_token():
+        return (str(uuid.uuid4()),get_time_after(minutes=0,hours=24))
 
     @staticmethod
     def validate_login(password_hash, password):
@@ -24,11 +28,14 @@ class User():
     @staticmethod
     def generate_password_hash(password):
         return generate_password_hash_(password)
-
-    def save(self):
-        self.id = app.mongo.db.users.insert(self.__dict__)
-        print(str(self.id))
-        if self.id:
-            return True
-        else:
-            return False
+    
+    @staticmethod
+    def create_user_data(payload):
+        payload["password_hash"] = Users.generate_password_hash(payload["password"])
+        del payload["password"]
+        token,expiry = Users.create_token()
+        payload["verification_token"] = token
+        payload["verification_token_expiry"] = expiry
+        payload["email_verified"] = False
+        payload["created_at"] = datetime.now()
+        return payload

@@ -1,8 +1,14 @@
+from mongoengine.queryset.visitor import Q
+from utils.time import get_time_after
+from models.session import UserSessions
+import traceback
+from utils.misc import get_or_none
 import uuid
+from datetime import date, datetime
+
 from app import app
-from utils.user import get_user_by_email, get_users_by_token_and_email, get_verified_users_by_id, update_email_verify_status, update_password_by_id, update_token
 from flask import request, jsonify
-from models.user import User
+from models.user import Users
 from bson import json_util
 import json
 
@@ -11,61 +17,79 @@ from flask import request
 import re
 from constants import fields
 from functools import wraps
-from flask import abort,request
+from flask import abort, request
 from constants import fields
+
 
 def authorize(f):
     @wraps(f)
     def decorated_function(*args, **kws):
-            if not fields.SESSION_ID in request.headers:
-               abort(401)
-            try:
-                session_id = request.headers.get(fields.SESSION_ID)
-                user_session = get_active_session_by_id(session_id)
-                if not user_session:
-                    abort(401)
-            except:
+        if fields.SESSION_ID not in request.headers:
+            abort(401)
+        try:
+            session_id = request.headers.get(fields.SESSION_ID)
+            user_session: UserSessions = get_or_none(
+                UserSessions.objects(Q(session_id=session_id) & Q(is_active=True) & Q(expiry_date__gte=datetime.now())))
+            if not user_session:
                 abort(401)
+        except:
+            print(traceback.format_exc())
+            abort(401)
 
-            return f(user_session[fields.user_id],user_session[fields.email], *args, **kws)
+        return f(user_session.user_id.id, user_session.email, *args, **kws)
+
     return decorated_function
 
 
 def is_strong(password):
     return re.match(r"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$", password)
 
+
 @app.route("/", methods=["GET"])
 def root():
     return "This is the superstore backend api"
 
+
 @app.route("/register", methods=["POST"])
-def new_user():
+def register_api():
     response = {
         fields.success: False,
-        fields.message: " "
+        fields.message: "Something went wrong"
     }
-    password = request.json.get(fields.password)
-    email = request.json.get(fields.email)
+    try:
 
-    if email is None or password is None:
-        response[fields.message] = "Email or password fields are empty"
+        password = request.get_json().get(fields.password)
+        email = request.get_json().get(fields.email)
+
+        if email is None or password is None:
+            response[fields.message] = "Email or password fields are empty"
+            return jsonify(response)
+        if not is_strong(password):
+            response[
+                fields.message] = "Password should contain at least one small letter, one capital letter, one number " \
+                                  "and one special symbol! "
+            return response
+        existing_user = get_or_none(Users.objects(email=email))
+        if existing_user is not None:
+            response[fields.message] = "Email address is already taken"
+            return response
+        payload = request.get_json()
+        payload = Users.create_user_data(payload)
+
+        user: Users = Users(**payload).save()
+
+        if user:
+            response[fields.success] = True
+            response[fields.message] = "Successfully registered the user"
+            response[fields.user_id] = user.id
+            send_verification_mail(email, user.verification_token)
+            response = json.loads(json_util.dumps(response))
+        else:
+            return response
         return jsonify(response)
-    if not is_strong(password):
-        response[fields.message] = "Password should contain at least one small letter, one capital letter, one number and one special symbol!"
+    except:
+        print(traceback.format_exc())
         return response
-    existing_user = get_user_by_email(email)
-    if existing_user is not None:
-        response[fields.message] = "Email address is already taken"
-        return jsonify(response)
-    
-    user = User(email, password)
-    if user.save():
-        response[fields.success] = True
-        response[fields.message] = "Successfully registered the user"
-        response[fields.user_id] = user.id
-        send_verification_mail(email, user.verification_token)
-        response = json.loads(json_util.dumps(response))
-    return jsonify(response)
 
 
 @app.route("/login", methods=["POST"])
@@ -77,17 +101,17 @@ def login():
     email = request.json.get(fields.email)
     password = request.json.get(fields.password)
     if email and password:
-        user = app.mongo.db.users.find_one({fields.email: email})
-        if user and User.validate_login(user["password_hash"], password):
-            num_sessions = get_active_sessions_by_user_id(user[fields._id])
+        user = get_or_none(Users.objects(email=email))
+        if user and Users.validate_login(user["password_hash"], password):
+            num_sessions = UserSessions.objects.filter(Q(user_id=user.id)&Q(expiry_date__gte=datetime.now())&Q(is_active=True)).count()
             if num_sessions <= 2:
-                new_session = create_new_session(user[fields._id], email)
+                new_session = UserSessions.create_new_session(user.id, email)
                 if new_session:
                     response[fields.success] = True
                     response[fields.message] = "Successfully logged in"
                     response[fields.session_id] = new_session[fields.session_id]
                 else:
-                    print("unable to store user session for user: "+str(user))
+                    print("unable to store user session for user: " + str(user))
                     response[fields.message] = "Unable to login"
             else:
                 response[fields.message] = "Sessions limit reached"
@@ -98,23 +122,22 @@ def login():
     return jsonify(response)
 
 
-
-
-
 @app.route("/logout")
 @authorize
-def logout(user_id,email):
+def logout(user_id, email):
     response = {
         fields.success: False,
         fields.message: " "
     }
-    
+
     if not request.headers.get(fields.SESSION_ID):
         response[fields.message] = "Some of the header fields are missing"
     else:
         session_id = request.headers.get(fields.SESSION_ID)
-        update_res = update_session_id(session_id)
-        if update_res.get("nModified", 0) >= 1:
+        n_sessions_updated = UserSessions.objects(session_id=session_id).update_one(set__is_active=False,
+                                                                                    set__expireAt=get_time_after(
+                                                                                        days=15))
+        if n_sessions_updated >= 1:
             response[fields.success] = True
             response[fields.message] = "User Logged out"
         else:
@@ -123,45 +146,53 @@ def logout(user_id,email):
 
     return jsonify(response)
 
+
 @app.route("/resend_verification_mail")
 @authorize
-def resend_verification_mail(user_id,email):
+def resend_verification_mail(user_id, email):
     response = {}
-    current_user = get_verified_users_by_id(user_id)
+    current_user = get_or_none(Users.objects(Q(id=user_id) & Q(email_verified=True)))
     if current_user:
         response[fields.success] = False
         response[fields.message] = "Email of the user is already verified"
     else:
         verification_token = str(uuid.uuid4())
-        verification_token,verification_token_expiry = User.create_token()
-        
-        update_res = update_token(fields.verification_token,user_id,verification_token,verification_token_expiry)
-        if update_res.get("nModified",0) == 1:
-            send_verification_mail(email,verification_token)
+
+        verification_token, verification_token_expiry = Users.create_token()
+
+        num = Users.objects(id=user_id).update_one(set__verification_token=verification_token,
+                                                   set__verification_token_expiry=verification_token_expiry)
+        if num == 1:
+            send_verification_mail(email, verification_token)
             response[fields.success] = True
             response[fields.message] = "Verification email sent successfully"
         else:
             response[fields.success] = False
             response[fields.message] = "Could not send verification mail, try again"
-        
+
     return response
+
 
 @app.route("/verify_email/<email>/<token>")
 def verify_email(email, token):
     response = {
-        fields.success : False,
-        fields.message : "Password reset email expired"
+        fields.success: False,
+        fields.message: "Password reset email expired"
     }
-    user_with_token = get_users_by_token_and_email(fields.verification_token,token,email)
+    # the next two statements need to be atomic I guess
+    user_with_token = get_or_none(
+        Users.objects(Q(verification_token=token) & Q(email=email) & Q(verification_token_expiry__gte=datetime.now())))
+
     if user_with_token:
-        update_res = update_email_verify_status(email)
-        if update_res.get("nModified") == 1:
+        n_users_updated = Users.objects(email=email).update_one(set__email_verified=True)
+        if n_users_updated == 1:
             response[fields.success] = True
-            response[fields.message] = "Email address verified successfully"    
+            response[fields.message] = "Email address verified successfully"
     else:
         response[fields.success] = False
         response[fields.message] = "Could not verify the email address"
     return response
+
 
 @app.route("/send_password_reset/")
 def send_password_reset():
@@ -170,14 +201,15 @@ def send_password_reset():
     if not email:
         response[fields.success] = False
         response[fields.message] = "Email not passed"
-    
-    user = get_user_by_email(email)
+
+    user = get_or_none(Users.objects(email=email))
     if user:
-        token,token_expiry = User.create_token()
-        update_res = update_token(fields.password_token,user[fields._id],token,token_expiry)
-        
-        if update_res.get("nModified") == 1:
-            send_password_reset_mail(email,token)
+        token, token_expiry = Users.create_token()
+        num = Users.objects(id=user.id).update_one(set__password_verification_token=token,
+                                                   set__password_verification_token_expiry=token_expiry)
+
+        if num == 1:
+            send_password_reset_mail(email, token)
             response[fields.success] = True
             response[fields.message] = "Password reset instructions has been sent to your mail"
         else:
@@ -188,23 +220,30 @@ def send_password_reset():
         response[fields.message] = "No users associated with the given email address"
     return response
 
-@app.route("/reset_password/<email>/<token>",methods=["GET","POST"])
-def hashcode(email,token):
-    user_with_token = get_users_by_token_and_email(fields.password_token,token,email)
+
+@app.route("/reset_password/<email>/<token>", methods=["GET", "POST"])
+def hashcode(email, token):
     
+    user_with_token = get_or_none(Users.objects(Q(password_verification_token=token) & Q(email=email) & Q(
+        password_verification_token_expiry__gte=datetime.now())))
+
     if user_with_token:
         if request.method == "POST":
             passw = request.form["passw"]
             cpassw = request.form["cpassw"]
             if passw == cpassw:
                 if not is_strong(passw):
-                    return "Password should contain at least one small letter, one capital letter, one number and one special symbol!"
-                new_password_hash = User.generate_password_hash(passw)
-                user_id = user_with_token[fields._id]
-                update_res = update_password_by_id(user_id,new_password_hash)
-                if update_res.get("nModified",0) == 1:        
-                    return "Password changed successfully"
+                    return "Password should contain at least one small letter, one capital letter, one number and one " \
+                           "special symbol! "
+                new_password_hash = Users.generate_password_hash(passw)
+                user_id = user_with_token.id
                 
+                num = Users.objects(id=user_id).update_one(set__password_hash=new_password_hash,
+                                                           set__password_verification_token=datetime.now())
+
+                if num == 1:
+                    return "Password changed successfully"
+
             else:
                 return """
                     Passwords do not match <br>
@@ -226,4 +265,3 @@ def hashcode(email,token):
             """
     else:
         return "Password recovery email expired!"
-from utils.session import create_new_session, get_active_sessions_by_user_id, update_session_id,get_active_session_by_id
