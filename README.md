@@ -20,3 +20,6 @@ Setup
     
 5. Install packages from requirements.txt<br>
     pip install -r .\requirements.txt
+    
+6. Run server:
+    python -m flask run
