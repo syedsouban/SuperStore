@@ -1,10 +1,11 @@
+from utils.session import authorize
 from mongoengine.queryset.visitor import Q
 from utils.time import get_time_after
 from models.session import UserSessions
 import traceback
 from utils.misc import get_or_none
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 
 from app import app
 from flask import request, jsonify
@@ -16,29 +17,8 @@ from utils.mail import send_password_reset_mail, send_verification_mail
 from flask import request
 import re
 from constants import fields
-from functools import wraps
-from flask import abort, request
+from flask import  request
 from constants import fields
-
-
-def authorize(f):
-    @wraps(f)
-    def decorated_function(*args, **kws):
-        if fields.SESSION_ID not in request.headers:
-            abort(401)
-        try:
-            session_id = request.headers.get(fields.SESSION_ID)
-            user_session: UserSessions = get_or_none(
-                UserSessions.objects(Q(session_id=session_id) & Q(is_active=True) & Q(expiry_date__gte=datetime.now())))
-            if not user_session:
-                abort(401)
-        except:
-            print(traceback.format_exc())
-            abort(401)
-
-        return f(user_session.user_id.id, user_session.email, *args, **kws)
-
-    return decorated_function
 
 
 def is_strong(password):
