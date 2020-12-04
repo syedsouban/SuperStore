@@ -12,5 +12,5 @@ itsdangerous~=1.1.0
 click~=7.1.2
 MarkupSafe~=1.1.1
 certifi~=2020.11.8
-WTForms~=2.3.3
 setuptools~=49.2.1
+flask_pymongo
