@@ -27,13 +27,14 @@ db:MongoEngine = MongoEngine(app)
 @app.before_request
 def log_request_info():
     app.logger.debug('Headers: %s', request.headers)
-    app.logger.debug('Body: %s', json.dumps(request.get_json()))
+    request_body = request.get_json()
+    if "password" in request_body:
+        del request_body["password"]
+    app.logger.debug('Body: %s', json.dumps(request_body))
 
 from routes import auth
 from routes import category
 from routes import product
-
-
 # db = app.mongo.db
 
 # with open("./schemas/category.json") as category_schema_file:
