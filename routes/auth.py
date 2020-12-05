@@ -27,6 +27,7 @@ def is_strong(password):
 
 @app.route("/", methods=["GET"])
 def root():
+    print(request.base_url)
     return "This is the superstore backend api"
 
 
@@ -62,7 +63,7 @@ def register_api():
             response[fields.success] = True
             response[fields.message] = "Successfully registered the user"
             response[fields.user_id] = user.id
-            send_verification_mail(email, user.verification_token)
+            send_verification_mail(request.host_url,email, user.verification_token)
             response = json.loads(json_util.dumps(response))
         else:
             return response
@@ -76,7 +77,7 @@ def register_api():
 def login():
     response = {
         fields.success: False,
-        fields.message: " "
+        fields.message: "Something went wrong"
     }
     email = request.json.get(fields.email)
     password = request.json.get(fields.password)
@@ -143,7 +144,7 @@ def resend_verification_mail(user_id, email):
         num = Users.objects(id=user_id).update_one(set__verification_token=verification_token,
                                                    set__verification_token_expiry=verification_token_expiry)
         if num == 1:
-            send_verification_mail(email, verification_token)
+            send_verification_mail(request.host_url,email, verification_token)
             response[fields.success] = True
             response[fields.message] = "Verification email sent successfully"
         else:
@@ -189,7 +190,7 @@ def send_password_reset():
                                                    set__password_verification_token_expiry=token_expiry)
 
         if num == 1:
-            send_password_reset_mail(email, token)
+            send_password_reset_mail(request.host_url,email, token)
             response[fields.success] = True
             response[fields.message] = "Password reset instructions has been sent to your mail"
         else:
