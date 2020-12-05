@@ -23,3 +23,11 @@ Setup
     
 6. Run server:
     python -m flask run
+    
+Setup for Ubuntu 16.04, Python3.8
+To install pip3.8 
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3.8 get-pip.py
+To start server using python3.8
+sudo /home/ubuntu/SuperStore/SuperStore/bin/python3.8 -m flask run --host 0.0.0.0 --port 90
+
