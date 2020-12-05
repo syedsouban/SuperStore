@@ -1,4 +1,6 @@
+import json
 from flask.app import Flask
+from flask.globals import request
 from flask_pymongo import PyMongo
 from flask_mongoengine import MongoEngine
 
@@ -21,6 +23,11 @@ app.config['MONGODB_SETTINGS'] = {
 app.mongo = PyMongo(app)
 app.APP_URL = "http://127.0.0.1:5000"
 db:MongoEngine = MongoEngine(app)
+
+@app.before_request
+def log_request_info():
+    app.logger.debug('Headers: %s', request.headers)
+    app.logger.debug('Body: %s', json.dumps(request.get_json()))
 
 from routes import auth
 from routes import category
