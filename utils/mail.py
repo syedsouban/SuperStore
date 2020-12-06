@@ -25,9 +25,9 @@ def send_mail(receiver_email,subject,is_html_message,message_str):
         server.sendmail(sender_email, receiver_email, message.as_string())
 
 def send_verification_mail(server_url,receiver_email,token):
-    verification_mail_message = """You have registered with SuperStore but you need to confirm your mail to access all features.<br>Click the following link to verify you email account %s/verify_email/%s/%s """%(server_url,receiver_email,token)
+    verification_mail_message = """You have registered with SuperStore but you need to confirm your mail to access all features.<br>Click the following link to verify you email account %sverify_email/%s/%s """%(server_url,receiver_email,token)
     send_mail(receiver_email,"Verify your SuperStore Account",True,verification_mail_message)
 
 def send_password_reset_mail(server_url,receiver_email,token):
-    verification_mail_message = """Click the following link to reset your password for your SuperStore account %s/reset_password/%s/%s """%(server_url,receiver_email,token)
+    verification_mail_message = """Click the following link to reset your password for your SuperStore account %sreset_password/%s/%s """%(server_url,receiver_email,token)
     send_mail(server_url,receiver_email,"Reset your SuperStore Account Password",True,verification_mail_message)

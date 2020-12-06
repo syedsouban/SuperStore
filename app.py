@@ -31,8 +31,10 @@ app.logger.setLevel(gunicorn_logger.level)
 @app.before_request
 def log_request_info():
     app.logger.debug('Headers: %s', request.headers)
-    request_body = request.get_json()
-    if "password" in request_body:
+    request_body = {}
+    if request.get_json():
+        request_body = request.get_json().copy()
+    if request_body and "password" in request_body:
         del request_body["password"]
     app.logger.debug('Body: %s', json.dumps(request_body))
 
