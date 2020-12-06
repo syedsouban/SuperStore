@@ -158,20 +158,28 @@ def resend_verification_mail(user_id, email):
 def verify_email(email, token):
     response = {
         fields.success: False,
-        fields.message: "Password reset email expired"
+        fields.message: "Something went wrong, try again!"
     }
     # the next two statements need to be atomic I guess
-    user_with_token = get_or_none(
-        Users.objects(Q(verification_token=token) & Q(email=email) & Q(verification_token_expiry__gte=datetime.now())))
-
-    if user_with_token:
+    user_with_email = get_or_none(Users.objects(Q(email=email)))
+    if user_with_email.email_verified:
+        response[fields.success] = True
+        response[fields.message] = "Email address is already verified"
+        return response
+    if user_with_email.verification_token == token and user_with_email.verification_token_expiry >= datetime.now():
         n_users_updated = Users.objects(email=email).update_one(set__email_verified=True)
         if n_users_updated == 1:
             response[fields.success] = True
             response[fields.message] = "Email address verified successfully"
+            return response
+        else:
+            response[fields.success] = False
+            response[fields.message] = "Could not verify user, try again!"
+            return response
     else:
         response[fields.success] = False
-        response[fields.message] = "Could not verify the email address"
+        response[fields.message] = "Verification mail expired or invalid"
+        return response
     return response
 
 

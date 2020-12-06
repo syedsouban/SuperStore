@@ -6,7 +6,7 @@ from flask_mongoengine import MongoEngine
 
 from flask import Flask
 
-
+import logging
 
 app = Flask(__name__)
 
@@ -23,6 +23,10 @@ app.config['MONGODB_SETTINGS'] = {
 app.mongo = PyMongo(app)
 app.APP_URL = "http://127.0.0.1:5000"
 db:MongoEngine = MongoEngine(app)
+
+gunicorn_logger = logging.getLogger('gunicorn.error')
+app.logger.handlers = gunicorn_logger.handlers
+app.logger.setLevel(gunicorn_logger.level)
 
 @app.before_request
 def log_request_info():
