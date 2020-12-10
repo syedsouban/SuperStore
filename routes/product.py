@@ -34,7 +34,7 @@ def create_product(user_id,email):
         print(traceback.format_exc())
         return {"success":False,"message":"Something went wrong"}
 
-@app.route("/products", methods=["GET"])
+@app.route("/products", methods=["POST"])
 @authorize
 def get_products(user_id,email):
     payload = request.get_json() if request.get_json() else {}
