@@ -37,7 +37,8 @@ def create_product(user_id,email):
 @app.route("/products", methods=["GET"])
 @authorize
 def get_products(user_id,email):
-    payload = request.get_json() if request.get_json() else {}
+    payload = request.args
+    # payload = request.get_json() if request.get_json() else {}
     filter_by = payload.get("filter_by")
     filter_by_value = payload.get("filter_by_value")
     sort_by = payload.get("sort_by")
