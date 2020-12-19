@@ -38,7 +38,6 @@ def register_api():
         fields.message: "Something went wrong"
     }
     try:
-
         password = request.get_json().get(fields.password)
         email = request.get_json().get(fields.email)
 

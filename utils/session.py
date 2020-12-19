@@ -22,6 +22,8 @@ def authorize(f):
             return f(user_session[fields.user_id],user_session[fields.email], *args, **kws)
     return decorated_function
 
+
+
 def update_session_id(session_id):
     return app.mongo.db.user_sessions.update(
             {fields.session_id: session_id},

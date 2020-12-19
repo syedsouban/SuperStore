@@ -1,7 +1,15 @@
 from datetime import datetime
 from utils.time import get_time_after
 from mongoengine.errors import DoesNotExist
+from utils._json import handle_mongoengine_response
 
+def post_process(function_to_decorate):
+    def inner(*args, **kw):
+        # Calling your function
+        output = function_to_decorate(*args, **kw)
+        # Below this line you can do post processing
+        return handle_mongoengine_response(output)
+    return inner
 
 def dict_to_obj(model_class, d):
     if isinstance(d, (list, tuple)):

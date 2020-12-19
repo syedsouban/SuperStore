@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 from models.category import Categories
-
+import bson
 from mongoengine.queryset.visitor import Q
 from utils.misc import create_who_columns, get_or_none, get_update_dict
 from bson.objectid import ObjectId
@@ -12,6 +12,7 @@ from flask import request
 from flask import request,jsonify
 from models.product import Products
 import traceback
+import mongoengine
 
 @app.route("/product", methods=["POST"])
 @authorize
@@ -30,13 +31,36 @@ def create_product(user_id,email):
     except pymongo.errors.WriteError:
         print(traceback.format_exc())
         return {"success":False,"message":"Some or all the fields were not present"}
+    except mongoengine.errors.NotUniqueError:
+        print(traceback.format_exc())
+        return {"success":False,"message":"Product with the same name already exists"}
     except:
         print(traceback.format_exc())
         return {"success":False,"message":"Something went wrong"}
 
-@app.route("/products", methods=["POST"])
-@authorize
-def get_products(user_id,email):
+@app.route("/product", methods=["GET"])
+def get_product():
+    response = {}
+    payload = request.args
+    product_id = payload.get("id")
+    if not product_id:
+        response["success"] = False
+        response["message"] = "Product id missing"
+    else:
+        try:
+            product = Products.objects(id=ObjectId(product_id)).first()
+            if product:
+                response = json.loads(product.to_json())
+            else:
+                response["success"] = False
+                response["message"] = "Product not found"
+        except bson.errors.InvalidId:
+            response["success"] = False
+            response["message"] = "Improper product id passed"
+    return jsonify(response)
+
+@app.route("/products", methods=["GET"])
+def get_products():
     payload = request.args
     # payload = request.get_json() if request.get_json() else {}
     filter_by = payload.get("filter_by")
