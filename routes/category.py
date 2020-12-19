@@ -1,7 +1,7 @@
 # CRUD for category
 from datetime import datetime
 import json
-
+import bson
 from bson.objectid import ObjectId
 from utils.misc import create_fields_for_deletion, create_who_columns, get_update_dict
 from routes.auth import authorize
@@ -11,6 +11,7 @@ from flask import request
 from flask import request,jsonify
 import traceback
 from models.category import Categories
+from utils._json import handle_mongoengine_json_array, handle_mongoengine_json
 
 @app.route("/category", methods=["POST"])
 @authorize
@@ -33,11 +34,31 @@ def create_category(user_id,email):
         return {"success":False,"message":"Something went wrong"}
 
 @app.route("/categories", methods=["GET"])
-@authorize
-def get_categories(user_id,email):
-    categories = Categories.objects(is_active=True).to_json()
-    categories = json.loads(categories)    
+def get_categories():
+    categories = (Categories.objects(is_active=True).to_json())
+    categories = handle_mongoengine_json_array(json.loads(categories))    
     return jsonify(categories)
+
+@app.route("/category", methods=["GET"])
+def get_category():
+    response = {}
+    payload = request.args
+    product_id = payload.get("id")
+    if not product_id:
+        response["success"] = False
+        response["message"] = "Category id missing"
+    else:
+        try:
+            product = Categories.objects(id=ObjectId(product_id)).first()
+            if product:
+                response = handle_mongoengine_json(json.loads(product.to_json()))
+            else:
+                response["success"] = False
+                response["message"] = "Category not found"
+        except bson.errors.InvalidId:
+            response["success"] = False
+            response["message"] = "Improper category id passed"
+    return jsonify(response)
 
 
 @app.route("/category", methods=["PATCH"])

@@ -1,10 +1,11 @@
 from datetime import datetime
 import json
 from models.category import Categories
-
+import bson
 from mongoengine.queryset.visitor import Q
 from utils.misc import create_who_columns, get_or_none, get_update_dict
-from bson.objectid import ObjectId
+from utils._json import handle_mongoengine_json, handle_mongoengine_json_array
+from bson.objectid import ObjectId, _raise_invalid_id
 from routes.auth import authorize
 import pymongo
 from app import app
@@ -34,8 +35,28 @@ def create_product(user_id,email):
         print(traceback.format_exc())
         return {"success":False,"message":"Something went wrong"}
 
+@app.route("/product", methods=["GET"])
+def get_product():
+    response = {}
+    payload = request.args
+    product_id = payload.get("id")
+    if not product_id:
+        response["success"] = False
+        response["message"] = "Product id missing"
+    else:
+        try:
+            product = Products.objects(id=ObjectId(product_id)).first()
+            if product:
+                response = handle_mongoengine_json(json.loads(product.to_json()))
+            else:
+                response["success"] = False
+                response["message"] = "Product not found"
+        except bson.errors.InvalidId:
+            response["success"] = False
+            response["message"] = "Improper product id passed"
+    return jsonify(response)
+
 @app.route("/products", methods=["GET"])
-@authorize
 def get_products(user_id,email):
     payload = request.args
     # payload = request.get_json() if request.get_json() else {}
@@ -69,7 +90,7 @@ def get_products(user_id,email):
             products = Products.objects().order_by(sort_by).to_json()
         else:
             products = Products.objects().search_text(search_query).order_by(sort_by).to_json()
-    products = json.loads(products)
+    products = handle_mongoengine_json_array(json.loads(products))
     return jsonify(products)
 
 @app.route("/product", methods=["PATCH"])
