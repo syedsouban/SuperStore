@@ -4,8 +4,7 @@ from models.category import Categories
 import bson
 from mongoengine.queryset.visitor import Q
 from utils.misc import create_who_columns, get_or_none, get_update_dict
-from utils._json import handle_mongoengine_json, handle_mongoengine_json_array
-from bson.objectid import ObjectId, _raise_invalid_id
+from bson.objectid import ObjectId
 from routes.auth import authorize
 import pymongo
 from app import app
@@ -13,6 +12,7 @@ from flask import request
 from flask import request,jsonify
 from models.product import Products
 import traceback
+import mongoengine
 
 @app.route("/product", methods=["POST"])
 @authorize
@@ -31,6 +31,9 @@ def create_product(user_id,email):
     except pymongo.errors.WriteError:
         print(traceback.format_exc())
         return {"success":False,"message":"Some or all the fields were not present"}
+    except mongoengine.errors.NotUniqueError:
+        print(traceback.format_exc())
+        return {"success":False,"message":"Product with the same name already exists"}
     except:
         print(traceback.format_exc())
         return {"success":False,"message":"Something went wrong"}
@@ -47,7 +50,7 @@ def get_product():
         try:
             product = Products.objects(id=ObjectId(product_id)).first()
             if product:
-                response = handle_mongoengine_json(json.loads(product.to_json()))
+                response = json.loads(product.to_json())
             else:
                 response["success"] = False
                 response["message"] = "Product not found"
@@ -57,7 +60,7 @@ def get_product():
     return jsonify(response)
 
 @app.route("/products", methods=["GET"])
-def get_products(user_id,email):
+def get_products():
     payload = request.args
     # payload = request.get_json() if request.get_json() else {}
     filter_by = payload.get("filter_by")
@@ -90,7 +93,7 @@ def get_products(user_id,email):
             products = Products.objects().order_by(sort_by).to_json()
         else:
             products = Products.objects().search_text(search_query).order_by(sort_by).to_json()
-    products = handle_mongoengine_json_array(json.loads(products))
+    products = json.loads(products)
     return jsonify(products)
 
 @app.route("/product", methods=["PATCH"])

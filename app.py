@@ -3,6 +3,8 @@ from flask.app import Flask
 from flask.globals import request
 from flask_pymongo import PyMongo
 from flask_mongoengine import MongoEngine
+from flask import Response
+from utils._json import handle_mongoengine_response
 
 from flask import Flask
 
@@ -37,6 +39,11 @@ def log_request_info():
     if request_body and "password" in request_body:
         del request_body["password"]
     app.logger.debug('Body: %s', json.dumps(request_body))
+
+@app.after_request
+def after_request_func(response):
+    response.set_data(json.dumps(handle_mongoengine_response(response.get_json())).encode("utf-8"))
+    return response
 
 from routes import auth
 from routes import category

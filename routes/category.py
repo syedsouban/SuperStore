@@ -11,7 +11,6 @@ from flask import request
 from flask import request,jsonify
 import traceback
 from models.category import Categories
-from utils._json import handle_mongoengine_json_array, handle_mongoengine_json
 
 @app.route("/category", methods=["POST"])
 @authorize
@@ -36,7 +35,7 @@ def create_category(user_id,email):
 @app.route("/categories", methods=["GET"])
 def get_categories():
     categories = (Categories.objects(is_active=True).to_json())
-    categories = handle_mongoengine_json_array(json.loads(categories))    
+    categories = json.loads(categories)
     return jsonify(categories)
 
 @app.route("/category", methods=["GET"])
@@ -51,7 +50,7 @@ def get_category():
         try:
             product = Categories.objects(id=ObjectId(product_id)).first()
             if product:
-                response = handle_mongoengine_json(json.loads(product.to_json()))
+                response = json.loads(product.to_json())
             else:
                 response["success"] = False
                 response["message"] = "Category not found"
