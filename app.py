@@ -46,7 +46,7 @@ def after_request_func(response):
     response.set_data(json.dumps(handle_mongoengine_response(response.get_json())).encode("utf-8"))
     return response
 
-socketio = SocketIO()
+socketio = SocketIO(logger=True,engineio_logger=True,cors_allowed_origins='*')
 
 socketio.init_app(app)
 
