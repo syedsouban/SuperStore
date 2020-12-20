@@ -5,6 +5,7 @@ from flask_pymongo import PyMongo
 from flask_mongoengine import MongoEngine
 from flask import Response
 from utils._json import handle_mongoengine_response
+from flask_socketio import SocketIO
 
 from flask import Flask
 
@@ -44,6 +45,10 @@ def log_request_info():
 def after_request_func(response):
     response.set_data(json.dumps(handle_mongoengine_response(response.get_json())).encode("utf-8"))
     return response
+
+socketio = SocketIO()
+
+socketio.init_app(app)
 
 from routes import auth
 from routes import category
