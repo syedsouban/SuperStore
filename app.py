@@ -53,6 +53,7 @@ socketio.init_app(app)
 from routes import auth
 from routes import category
 from routes import product
+from routes import chat
 # db = app.mongo.db
 
 # with open("./schemas/category.json") as category_schema_file:
