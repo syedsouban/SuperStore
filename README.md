@@ -13,7 +13,8 @@ Setup
     https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/
 
 3. Create a virtual env:<br>
-    python -m venv ./SuperStore
+    python -m venv ./SuperStore (windows)
+    python3.8 -m venv SuperStore (linux)
 
 4. Activate the newly created virtual environment<br>
     .\SuperStore\Scripts\activate
