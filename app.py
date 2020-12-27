@@ -43,7 +43,8 @@ def log_request_info():
 
 @app.after_request
 def after_request_func(response):
-    response.set_data(json.dumps(handle_mongoengine_response(response.get_json())).encode("utf-8"))
+    if type(response) == dict:
+        response.set_data(json.dumps(handle_mongoengine_response(response.get_json())).encode("utf-8"))
     return response
 
 socketio = SocketIO()
@@ -54,6 +55,10 @@ from routes import auth
 from routes import category
 from routes import product
 from routes import chat
+
+if __name__ == "__main__":
+    socketio.run(app)
+
 # db = app.mongo.db
 
 # with open("./schemas/category.json") as category_schema_file:
