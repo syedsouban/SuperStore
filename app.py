@@ -8,6 +8,7 @@ from utils._json import handle_mongoengine_response
 from flask_socketio import SocketIO
 
 from flask import Flask
+from flask.wrappers import Response
 
 import logging
 
@@ -43,7 +44,7 @@ def log_request_info():
 
 @app.after_request
 def after_request_func(response):
-    if type(response) == dict:
+    if type(response) == Response:
         response.set_data(json.dumps(handle_mongoengine_response(response.get_json())).encode("utf-8"))
     return response
 
