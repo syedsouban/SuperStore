@@ -1,1 +1,1 @@
-sudo pkill -f python3.8
+sudo pkill -f /home/ubuntu/SuperStore/stage/SuperStore/bin/python3.8
