@@ -25,7 +25,7 @@ app.config['MONGODB_SETTINGS'] = {
     'port': 27017
 }
 app.mongo = PyMongo(app)
-app.APP_URL = "http://127.0.0.1:5000"
+app.APP_URL = "http://0.0.0.0:80"
 db:MongoEngine = MongoEngine(app)
 
 gunicorn_logger = logging.getLogger('gunicorn.error')
