@@ -1,16 +1,19 @@
 # CRUD for category
 from datetime import datetime
 import json
+
 import bson
 from bson.objectid import ObjectId
 from utils.misc import create_fields_for_deletion, create_who_columns, get_update_dict
-from routes.auth import authorize
+
 import pymongo
-from app import app
+
 from flask import request
 from flask import request,jsonify
 import traceback
 from models.category import Categories
+from utils.session import authorize
+from app import app
 
 @app.route("/category", methods=["POST"])
 @authorize
