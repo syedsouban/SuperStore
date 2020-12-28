@@ -44,7 +44,7 @@ def log_request_info():
 
 @app.after_request
 def after_request_func(response):
-    if type(response) == Response:
+    if type(response) == Response and response.get_json():
         response.set_data(json.dumps(handle_mongoengine_response(response.get_json())).encode("utf-8"))
     return response
 
