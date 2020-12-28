@@ -55,6 +55,7 @@ from routes import auth
 from routes import category
 from routes import product
 from routes import chat
+from events import events
 
 if __name__ == "__main__":
     socketio.run(app)

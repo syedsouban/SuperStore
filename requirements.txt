@@ -21,3 +21,4 @@ greenlet==0.4.15
 monotonic==1.5
 python-engineio==3.11.2
 python-socketio==4.4.0
+gunicorn

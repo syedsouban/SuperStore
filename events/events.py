@@ -1,10 +1,11 @@
 from flask import session
 from flask_socketio import emit, join_room, leave_room
-from .. import socketio
+from app import socketio
 
 
 @socketio.on('joined', namespace='/chat')
 def joined(message):
+    print("joined")
     """Sent by clients when they enter a room.
     A status message is broadcast to all people in the room."""
     room = session.get('room')
