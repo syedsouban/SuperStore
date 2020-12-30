@@ -6,6 +6,7 @@ from flask_mongoengine import MongoEngine
 from flask import Response
 from utils._json import handle_mongoengine_response
 from flask_socketio import SocketIO
+import os
 
 from flask import Flask
 from flask.wrappers import Response
@@ -28,13 +29,20 @@ app.mongo = PyMongo(app)
 app.APP_URL = "http://0.0.0.0:80"
 db:MongoEngine = MongoEngine(app)
 
+app.config["PORT"] = os.environ.get("PORT")
+print("port number is "+os.environ.get("PORT"))
 gunicorn_logger = logging.getLogger('gunicorn.error')
 app.logger.handlers = gunicorn_logger.handlers
 app.logger.setLevel(gunicorn_logger.level)
 
+
+
 @app.before_request
 def log_request_info():
+    server_number = app.config["PORT"]
     app.logger.debug('Headers: %s', request.headers)
+    app.logger.debug("Server %s is handling the request!"%server_number)
+    print("Server %s is handling the request"%server_number)
     request_body = {}
     if request.get_json():
         request_body = request.get_json().copy()
@@ -48,6 +56,11 @@ def after_request_func(response):
         response.set_data(json.dumps(handle_mongoengine_response(response.get_json())).encode("utf-8"))
     return response
 
+@app.route("/which", methods=["GET"])
+def root():
+    server_number = app.config["PORT"]
+    return "This is the superstore backend api %s server"%server_number
+
 socketio = SocketIO(logger=True,engineio_logger=True,cors_allowed_origins='*')
 
 socketio.init_app(app)
@@ -56,6 +69,7 @@ from routes import auth
 from routes import category
 from routes import product
 from routes import chat
+app.register_blueprint(chat.bp)
 from events import events
 
 if __name__ == "__main__":

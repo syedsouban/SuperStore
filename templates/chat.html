@@ -7,7 +7,7 @@
     <script type="text/javascript" charset="utf-8">
         var socket;
         $(document).ready(function() {
-            socket = io.connect('http://' + document.domain + ':' + location.port + '/chat');
+            socket = io.connect('http://' + document.domain + ':' + location.port + '/socket_io/chat');
             socket.on('connect', function() {
                 socket.emit('joined', {});
             });
@@ -37,7 +37,7 @@
                 socket.disconnect();
 
                 // go back to the login page
-                window.location.href = "{{ url_for('.index') }}";
+                window.location.href = "{{ url_for('chat.index') }}";
             });
         }
     </script>

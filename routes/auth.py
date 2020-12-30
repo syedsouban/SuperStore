@@ -25,12 +25,6 @@ def is_strong(password):
     return re.match(r"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$", password)
 
 
-# @app.route("/", methods=["GET"])
-# def root():
-#     print(request.base_url)
-#     return "This is the superstore backend api"
-
-
 @app.route("/register", methods=["POST"])
 def register_api():
     response = {
