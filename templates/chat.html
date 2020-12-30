@@ -7,7 +7,7 @@
     <script type="text/javascript" charset="utf-8">
         var socket;
         $(document).ready(function() {
-            socket = io.connect('http://' + document.domain + ':' + location.port + '/socket_io/chat');
+            socket = io.connect('http://' + document.domain + ':' + location.port + '/socket_io');
             socket.on('connect', function() {
                 socket.emit('joined', {});
             });
@@ -16,7 +16,7 @@
                 $('#chat').scrollTop($('#chat')[0].scrollHeight);
             });
             socket.on('message', function(data) {
-		console.log("data recieved"+data.msg);
+                console.log("data recieved" + data.msg);
                 $('#chat').val($('#chat').val() + data.msg + '\n');
                 $('#chat').scrollTop($('#chat')[0].scrollHeight);
             });
