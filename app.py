@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch()
 import json
 from flask.app import Flask
 from flask.globals import request
@@ -61,7 +63,7 @@ def root():
     server_number = app.config["PORT"]
     return "This is the superstore backend api %s server"%server_number
 
-socketio = SocketIO(logger=True,engineio_logger=True,cors_allowed_origins='*')
+socketio = SocketIO(logger=True,engineio_logger=True,cors_allowed_origins='*',message_queue='redis://redis')
 
 socketio.init_app(app)
 
