@@ -63,9 +63,9 @@ def root():
     server_number = app.config["PORT"]
     return "This is the superstore backend api %s server"%server_number
 
-socketio = SocketIO(logger=True,engineio_logger=True,cors_allowed_origins='*',message_queue='redis://redis')
-
-socketio.init_app(app)
+# socketio = SocketIO(logger=True,engineio_logger=True,cors_allowed_origins='*',message_queue='redis://127.0.0.1:6379')
+socketio = SocketIO(cors_allowed_origins='*')
+socketio.init_app(app,message_queue='redis://')
 
 from routes import auth
 from routes import category
