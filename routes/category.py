@@ -14,13 +14,21 @@ import traceback
 from models.category import Categories
 from utils.session import authorize
 from app import app
+from utils.aws import upload_image
 
 @app.route("/category", methods=["POST"])
 @authorize
 def create_category(user_id,email):
-    payload = request.get_json()
+    # payload = request.get_json()
+    payload = request.form.to_dict()
+    if payload.get("tags"):
+        payload["tags"] = payload["tags"].split(",")
     try:
         payload["is_active"] = True
+        if request.method == 'POST' and 'photo' in request.files:
+            payload["image_url"] = upload_image(request)        
+        else:
+            return {"success":False,"message":"Category image missing"}
         payload["seller_id"] = user_id
         payload = create_who_columns(email=email,payload=payload)
         inserted_category = Categories(**payload).save()

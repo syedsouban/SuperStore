@@ -12,7 +12,7 @@ import os
 
 from flask import Flask
 from flask.wrappers import Response
-
+from flask_uploads import UploadSet, IMAGES, configure_uploads
 import logging
 
 app = Flask(__name__)
@@ -37,7 +37,9 @@ gunicorn_logger = logging.getLogger('gunicorn.error')
 app.logger.handlers = gunicorn_logger.handlers
 app.logger.setLevel(gunicorn_logger.level)
 
-
+app.config['UPLOADED_PHOTOS_DEST'] = os.getcwd()
+photos = UploadSet('photos', IMAGES)
+configure_uploads(app, photos)
 
 @app.before_request
 def log_request_info():

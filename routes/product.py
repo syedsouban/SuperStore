@@ -11,14 +11,22 @@ from app import app
 from flask import request
 from flask import request,jsonify
 from models.product import Products
+from utils.aws import upload_image
 import traceback
 import mongoengine
 
 @app.route("/product", methods=["POST"])
 @authorize
 def create_product(user_id,email):
-    payload = request.get_json()
+    # payload = request.get_json()
+    payload = request.form.to_dict()
+    if payload.get("tags"):
+        payload["tags"] = payload["tags"].split(",")
     try:
+        if request.method == 'POST' and 'photo' in request.files:
+            payload["image_url"] = upload_image(request)        
+        else:
+            return {"success":False,"message":"Product image missing"}    
         payload["seller_id"] = ObjectId(user_id)
         if payload.get("category_id"):
             payload["category_id"] = ObjectId(payload["category_id"])
