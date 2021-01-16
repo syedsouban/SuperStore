@@ -1,4 +1,6 @@
 from datetime import datetime
+
+from flask.globals import session
 from app import app
 from utils.time import get_time_after
 import uuid
@@ -22,7 +24,22 @@ def authorize(f):
             return f(user_session[fields.user_id],user_session[fields.email], *args, **kws)
     return decorated_function
 
-
+def authorize_web(f):
+    @wraps(f)
+    def decorated_function(*args, **kws):
+            if not fields.did in session:
+               abort(401)
+            try:
+                session_id = session.get(fields.did)
+                user_session = get_active_session_by_id(session_id)
+                if not user_session:
+                    abort(401)
+            except:
+                abort(401)
+            session['user_id'] = str(user_session[fields.user_id])
+            session['email'] = user_session[fields.email]
+            return f(*args, **kws)
+    return decorated_function
 
 def update_session_id(session_id):
     return app.mongo.db.user_sessions.update(

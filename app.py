@@ -1,5 +1,5 @@
-import eventlet
-eventlet.monkey_patch()
+# import eventlet
+# eventlet.monkey_patch()
 import json
 from flask.app import Flask
 from flask.globals import request
@@ -52,6 +52,9 @@ def log_request_info():
         del request_body["password"]
     app.logger.debug('Body: %s', json.dumps(request_body))
 
+from routes import chat
+app.register_blueprint(chat.bp)
+
 @app.after_request
 def after_request_func(response):
     if type(response) == Response and response.get_json():
@@ -65,13 +68,13 @@ def root():
 
 # socketio = SocketIO(logger=True,engineio_logger=True,cors_allowed_origins='*',message_queue='redis://127.0.0.1:6379')
 socketio = SocketIO(cors_allowed_origins='*')
-socketio.init_app(app,message_queue='redis://')
+socketio.init_app(app)
+# socketio.init_app(app,message_queue='redis://')
 
 from routes import auth
 from routes import category
 from routes import product
-from routes import chat
-app.register_blueprint(chat.bp)
+
 from events import events
 
 if __name__ == "__main__":

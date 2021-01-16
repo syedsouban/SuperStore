@@ -68,6 +68,9 @@ def get_products():
     sort_by = payload.get("sort_by")
     order = payload.get("order")
     search_query = payload.get("search_query")
+    return search_products(search_query,filter_by,filter_by_value,sort_by,order)
+
+def search_products(search_query = None,filter_by = None,filter_by_value = None,sort_by = None,order = None):
     if order and sort_by:
         if order == 'asc':
             sort_by = '+'+sort_by

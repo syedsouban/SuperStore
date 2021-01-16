@@ -24,7 +24,6 @@ from constants import fields
 def is_strong(password):
     return re.match(r"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$", password)
 
-
 @app.route("/register", methods=["POST"])
 def register_api():
     response = {
@@ -68,12 +67,15 @@ def register_api():
 
 @app.route("/login", methods=["POST"])
 def login():
+    email = request.json.get(fields.email)
+    password = request.json.get(fields.password)
+    return handle_login(email,password)
+
+def handle_login(email,password):
     response = {
         fields.success: False,
         fields.message: "Something went wrong"
     }
-    email = request.json.get(fields.email)
-    password = request.json.get(fields.password)
     if email and password:
         user = get_or_none(Users.objects(email=email))
         if user and Users.validate_login(user["password_hash"], password):
@@ -94,7 +96,6 @@ def login():
     else:
         response[fields.message] = "Username or password not entered"
     return jsonify(response)
-
 
 @app.route("/logout")
 @authorize
