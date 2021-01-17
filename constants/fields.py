@@ -3,7 +3,7 @@ from email import message
 
 user_id = "user_id"
 session_id = "session_id"
-SESSION_ID = "SESSION_ID"
+SESSION_ID = "Session-Id"
 _id = "_id"
 did = "id"
 email = "email"
