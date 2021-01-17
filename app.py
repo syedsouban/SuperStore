@@ -36,6 +36,7 @@ print("port number is "+os.environ.get("PORT"))
 gunicorn_logger = logging.getLogger('gunicorn.error')
 app.logger.handlers = gunicorn_logger.handlers
 app.logger.setLevel(gunicorn_logger.level)
+logging.root.setLevel(logging.INFO)
 
 app.config['UPLOADED_PHOTOS_DEST'] = os.getcwd()
 photos = UploadSet('photos', IMAGES)
@@ -44,15 +45,15 @@ configure_uploads(app, photos)
 @app.before_request
 def log_request_info():
     server_number = app.config["PORT"]
-    app.logger.debug('Headers: %s', request.headers)
-    app.logger.debug("Server %s is handling the request!"%server_number)
+    logging.info('Headers: %s', request.headers)
+    logging.info("Server %s is handling the request!"%server_number)
     print("Server %s is handling the request"%server_number)
     request_body = {}
     if request.get_json():
         request_body = request.get_json().copy()
     if request_body and "password" in request_body:
         del request_body["password"]
-    app.logger.debug('Body: %s', json.dumps(request_body))
+    logging.info('Body: %s', json.dumps(request_body))
 
 @app.after_request
 def after_request_func(response):
