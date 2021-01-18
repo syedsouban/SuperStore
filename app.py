@@ -32,12 +32,19 @@ app.APP_URL = "http://0.0.0.0:80"
 db:MongoEngine = MongoEngine(app)
 
 app.config["PORT"] = os.environ.get("PORT")
-print("port number is "+os.environ.get("PORT"))
+#print("port number is "+os.environ.get("PORT"))
 gunicorn_logger = logging.getLogger('gunicorn.error')
 app.logger.handlers = gunicorn_logger.handlers
 app.logger.setLevel(gunicorn_logger.level)
-logging.root.setLevel(logging.INFO)
 
+import time
+rootLogger = logging.getLogger()
+fileHandler = logging.FileHandler("{0}/{1}.log".format("./",str(time.time())))
+rootLogger.addHandler(fileHandler)
+consoleHandler = logging.StreamHandler()
+    # consoleHandler.setFormatter(logFormatter)
+#rootLogger.addHandler(consoleHandler)
+#logging.root.setLevel(logging.INFO)
 app.config['UPLOADED_PHOTOS_DEST'] = os.getcwd()
 photos = UploadSet('photos', IMAGES)
 configure_uploads(app, photos)
@@ -45,15 +52,21 @@ configure_uploads(app, photos)
 @app.before_request
 def log_request_info():
     server_number = app.config["PORT"]
-    logging.info('Headers: %s', request.headers)
-    logging.info("Server %s is handling the request!"%server_number)
-    print("Server %s is handling the request"%server_number)
+    logging.root.info('Headers: %s', request.headers)
+    logging.root.info("Server %s is handling the request!"%server_number)
+    
+    #print("Server %s is handling the request"%server_number)
     request_body = {}
+    
     if request.get_json():
         request_body = request.get_json().copy()
     if request_body and "password" in request_body:
         del request_body["password"]
-    logging.info('Body: %s', json.dumps(request_body))
+    if not request_body and request.form:
+        logging.root.info('Body: %s', str(request.form))    
+        if request.files:
+            logging.root.info('Request file: %s', str(request.files))    
+    logging.root.info('Body: %s', json.dumps(request_body))
 
 @app.after_request
 def after_request_func(response):

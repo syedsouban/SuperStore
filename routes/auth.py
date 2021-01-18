@@ -78,7 +78,7 @@ def login():
         user = get_or_none(Users.objects(email=email))
         if user and Users.validate_login(user["password_hash"], password):
             num_sessions = UserSessions.objects.filter(Q(user_id=user.id)&Q(expiry_date__gte=datetime.now())&Q(is_active=True)).count()
-            if num_sessions <= 2:
+            if num_sessions <= 100:
                 new_session = UserSessions.create_new_session(user.id, email)
                 if new_session:
                     response[fields.success] = True
@@ -170,9 +170,10 @@ def verify_email(email, token):
     return response
 
 
-@app.route("/send_password_reset/")
+@app.route("/send_password_reset/", methods=["GET", "POST"])
 def send_password_reset():
-    email = request.get_json().get(fields.email)
+    payload = request.args
+    email = payload.get(fields.email)
     response = {}
     if not email:
         response[fields.success] = False
