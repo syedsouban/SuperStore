@@ -27,3 +27,9 @@ def chat():
     if name == '' or room == '':
         return redirect(url_for('chat.index'))
     return render_template('chat.html', name=name, room=room)
+
+@bp.route('/chat/product')
+def product_chat():
+    if name == '' or room == '':
+        return redirect(url_for('chat.index'))
+    return render_template('chat.html', name=name, room=room)

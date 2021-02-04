@@ -1,9 +1,10 @@
+import logging
 from utils.session import authorize
 from mongoengine.queryset.visitor import Q
 from utils.time import get_time_after
 from models.session import UserSessions
 import traceback
-from utils.misc import get_or_none
+from utils.misc import get_host, get_or_none
 import uuid
 from datetime import datetime
 
@@ -20,6 +21,11 @@ from constants import fields
 from flask import  request
 from constants import fields
 
+
+@app.route("/", methods=["GET"])
+def hello():
+    print(str(request.headers))
+    return jsonify("Hello, world!")
 
 def is_strong(password):
     return re.match(r"^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$", password)
@@ -53,10 +59,11 @@ def register_api():
         user: Users = Users(**payload).save()
 
         if user:
+            host = get_host(request)
             response[fields.success] = True
             response[fields.message] = "Successfully registered the user"
             response[fields.user_id] = user.id
-            send_verification_mail(request.host_url,email, user.verification_token)
+            send_verification_mail(host, email, user.verification_token)
             response = json.loads(json_util.dumps(response))
         else:
             return response

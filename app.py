@@ -1,5 +1,3 @@
-# import eventlet
-# eventlet.monkey_patch()
 import json
 from flask.app import Flask
 from flask.globals import request
@@ -7,7 +5,7 @@ from flask_pymongo import PyMongo
 from flask_mongoengine import MongoEngine
 from flask import Response
 from utils._json import handle_mongoengine_response
-# from flask_socketio import SocketIO
+from flask_socketio import SocketIO
 import os
 
 from flask import Flask
@@ -16,8 +14,6 @@ from flask_uploads import UploadSet, IMAGES, configure_uploads
 import logging
 
 app = Flask(__name__)
-
-
 
 app.config["SECRET_KEY"] = "5d8b7997-de22-49a0-b76f-87da47d5b2ab"
 app.config["MONGO_URI"] = "mongodb://127.0.0.1:27017/superStoreDb"
@@ -28,7 +24,7 @@ app.config['MONGODB_SETTINGS'] = {
     'port': 27017
 }
 app.mongo = PyMongo(app)
-app.APP_URL = "http://0.0.0.0:80"
+# app.APP_URL = "http://0.0.0.0:80"
 db:MongoEngine = MongoEngine(app)
 
 app.config["PORT"] = os.environ.get("PORT")
@@ -55,7 +51,7 @@ def log_request_info():
     logging.root.info('Headers: %s', request.headers)
     logging.root.info("Server %s is handling the request!"%server_number)
     
-    #print("Server %s is handling the request"%server_number)
+    print("Server %s is handling the request"%server_number)
     request_body = {}
     
     if request.get_json():
@@ -79,19 +75,26 @@ def root():
     server_number = app.config["PORT"]
     return "This is the superstore backend api %s server"%server_number
 
-# socketio = SocketIO(logger=True,engineio_logger=True,cors_allowed_origins='*',message_queue='redis://127.0.0.1:6379')
-# socketio = SocketIO(cors_allowed_origins='*')
-# socketio.init_app(app,message_queue='redis://')
 
 from routes import auth
 from routes import category
 from routes import product
-# from routes import chat
-# app.register_blueprint(chat.bp)
-# from events import events
+import eventlet
+eventlet.monkey_patch()
+# socketio = SocketIO(logger=True,engineio_logger=True,cors_allowed_origins='*',message_queue='redis://127.0.0.1:6379')
+socketio = SocketIO(cors_allowed_origins='*')
+socketio.init_app(app,message_queue='redis://')
 
-# if __name__ == "__main__":
-#     socketio.run(app)
+from routes import chat
+app.register_blueprint(chat.bp)
+from events import events
+
+@socketio.on_error_default  # handles all namespaces without an explicit error handler
+def default_error_handler(e):
+    print("SocketIO Error has occured: "+str(e))
+
+if __name__ == "__main__":
+    socketio.run(app)
 
 # db = app.mongo.db
 

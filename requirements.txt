@@ -1,28 +1,19 @@
-flask~=1.1.2
-pymongo~=3.11.1
+flask
+pymongo
 flask-mongoengine
-mongoengine~=0.21.0
-Werkzeug~=1.0.1
-dnspython~=2.0.0
-idna~=2.10
-requests~=2.25.0
-pip~=20.2.4
-Jinja2~=2.11.2
-itsdangerous~=1.1.0
-click~=7.1.2
-MarkupSafe~=1.1.1
-certifi~=2020.11.8
-setuptools~=49.2.1
+mongoengine
+requests
 flask_pymongo
-# eventlet==0.25.1
-Flask-SocketIO==4.2.1
-Flask-WTF==0.14.3
-# greenlet==0.4.15
-monotonic==1.5
-python-engineio==3.11.2
-python-socketio==4.4.0
+eventlet
+Flask-SocketIO
+Flask-WTF
+dnspython < 2.0.0
+greenlet
+python-engineio
+python-socketio
 gunicorn
 redis
 Flask-Reuploaded
 boto3
 python-dotenv
+gevent

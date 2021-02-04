@@ -1,2 +1,2 @@
 bash kill.sh
-bash start.sh
+bash spawn_servers.sh

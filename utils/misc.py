@@ -2,6 +2,19 @@ from datetime import datetime
 from utils.time import get_time_after
 from mongoengine.errors import DoesNotExist
 from utils._json import handle_mongoengine_response
+from functools import wraps
+import traceback
+import logging
+
+def get_host(request):
+    try:
+        headers = request.headers
+        host_port = headers.get('Host')
+        host = host_port.split(":")[0]
+        return host
+    except:
+        logging.exception("Unable to fetch server host!")
+        return None
 
 def post_process(function_to_decorate):
     def inner(*args, **kw):

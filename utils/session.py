@@ -6,7 +6,6 @@ from constants import fields
 from functools import wraps
 from flask import abort,request
 import logging
-
 def authorize(f):
     @wraps(f)
     def decorated_function(*args, **kws):
@@ -28,7 +27,6 @@ def authorize(f):
 
             return f(user_session[fields.user_id],user_session[fields.email], *args, **kws)
     return decorated_function
-
 
 
 def update_session_id(session_id):
