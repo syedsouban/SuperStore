@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+from flask.globals import session
 
 from flask.templating import render_template
 from models.chat import Chats
@@ -107,8 +108,46 @@ def delete_product(user_id,email):
         return {"success":False,"message":"Something went wrong"}
 
 @app.route("/products", methods=["GET"])
+def get_products():
+    payload = request.args
+    print(request.host+" "+request.host_url+request.url+" "+request.url_root)
+    filter_by = payload.get("filter_by")
+    filter_by_value = payload.get("filter_by_value")
+    sort_by = payload.get("sort_by")
+    order = payload.get("order")
+    search_query = payload.get("search_query")
+    if order and sort_by:
+        if order == 'asc':
+            sort_by = '+'+sort_by
+        elif order == 'desc':
+            sort_by = '-'+sort_by
+        else:
+            print("Improper sort order sent")
+    else:
+        sort_by = 'created_at'
+    if filter_by and filter_by_value:
+        category_id = get_or_none(Categories.objects(**{filter_by.replace('category_',''):filter_by_value})).id
+        if category_id:
+            category_id = ObjectId(category_id)
+            queries = Q(**{"category_id":category_id})
+            if not search_query:
+                products = Products.objects(queries).order_by(sort_by).to_json()    
+            else:
+                products = Products.objects(queries).search_text(search_query).order_by(sort_by).to_json()
+        else:
+            return []
+    else:
+        if not search_query:
+            products = Products.objects().order_by(sort_by).to_json()
+        else:
+            products = Products.objects().search_text(search_query).order_by(sort_by).to_json()
+    products = json.loads(products)
+    return jsonify(products)
+
+
+@app.route("/products_chat", methods=["GET"])
 @authorize
-def get_products(user_id,email):
+def products_chat(user_id,email):
     payload = request.args
 
     print(request.host+" "+request.host_url+request.url+" "+request.url_root)
@@ -150,12 +189,11 @@ def get_products(user_id,email):
         product_id = product.get("_id").get("$oid")
         seller_id = product.get("seller_id").get("$oid")    
         buyer_id = str(user_id)
-        return init_chat(buyer_id,seller_id,product_id)
-
+        return init_chat(email,buyer_id,seller_id,product_id)
 
     return jsonify(products)
 
-def init_chat(buyer_id,seller_id,product_id):
+def init_chat(buyer_email,buyer_id,seller_id,product_id):
     product_chat = get_or_none(Chats.objects(Q(product_id=ObjectId(product_id)) & Q(seller_id=ObjectId(seller_id)) & Q(
         buyer_id=ObjectId(buyer_id))))
     payload = {
@@ -176,7 +214,8 @@ def init_chat(buyer_id,seller_id,product_id):
     
     #create room with sid as combination of buyer_id, seller_id and product_id and add buyer to the room
     #whenever seller comes online add him to the room
-    room = product_id+"_"+seller_id+"_"+buyer_id      
+    room = product_id+"_"+seller_id+"_"+buyer_id
+    session['name'] = buyer_email      
 
     return render_template('chat.html', name=buyer_id, room=room)
 
