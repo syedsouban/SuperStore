@@ -1,5 +1,5 @@
 import logging
-from utils.session import authorize
+from utils.session import authorize, get_active_session_by_id
 from mongoengine.queryset.visitor import Q
 from utils.time import get_time_after
 from models.session import UserSessions
@@ -18,9 +18,9 @@ from utils.mail import send_password_reset_mail, send_verification_mail
 from flask import request
 import re
 from constants import fields
-from flask import  request
+from flask import  request, session, render_template, redirect, url_for
 from constants import fields
-
+from forms.forms import SigninForm
 
 @app.route("/", methods=["GET"])
 def hello():
@@ -73,14 +73,11 @@ def register_api():
         return response
 
 
-@app.route("/login", methods=["POST"])
-def login():
+def handle_login(email, password):
     response = {
         fields.success: False,
         fields.message: "Something went wrong"
     }
-    email = request.json.get(fields.email)
-    password = request.json.get(fields.password)
     if email and password:
         user = get_or_none(Users.objects(email=email))
         if user and Users.validate_login(user["password_hash"], password):
@@ -100,7 +97,39 @@ def login():
             response[fields.message] = "Incorrect email or password"
     else:
         response[fields.message] = "Username or password not entered"
+    return response
+
+@app.route("/login", methods=["POST"])
+def login():
+    
+    email = request.json.get(fields.email)
+    password = request.json.get(fields.password)
+    response = handle_login(email, password)
     return jsonify(response)
+
+@app.route('/web_login', methods=['GET', 'POST'])
+def web_login():
+    form = SigninForm()
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            email = form.email.data
+            password = form.password.data
+            login_response = handle_login(email,password)
+            if login_response.get("success",False):
+                session['id'] = login_response[fields.session_id]
+                session['name'] = email
+                return "Login successful"
+            else:
+                return login_response.get("message")
+    elif request.method == 'GET':
+        session_id = session.get("id")
+        if session_id:
+            user_session = get_active_session_by_id(session_id)
+            if user_session:
+                return "Already logged in!"
+            else:
+                return "Invalid sessionid"
+    return render_template('login.html', form=form)
 
 
 @app.route("/logout")

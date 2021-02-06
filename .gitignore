@@ -1,0 +1,10 @@
+__pycache__
+*.log
+*.jpg
+.vscode
+.env
+logs
+SuperStore
+database
+logs
+*.rdb

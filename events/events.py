@@ -1,7 +1,12 @@
-from flask import session
+from flask import session, request
 from flask_socketio import join_room, leave_room, emit
 from app import socketio
 
+@socketio.on('connect')
+def connect():
+    foo = request.args.get('SESSION-ID')
+    print(foo)
+    # foo will be 'bar' when a client connects
 
 @socketio.on('joined', namespace='/socket_io')
 def joined(message):

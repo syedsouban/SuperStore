@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 from flask.globals import session
-
+import logging
 from flask.templating import render_template
 from models.chat import Chats
 from models.category import Categories
@@ -18,6 +18,9 @@ from models.product import Products
 from utils.aws import upload_image
 import traceback
 import mongoengine
+from utils._json import handle_mongoengine_response
+
+import database
 
 @app.route("/product", methods=["POST"])
 @authorize
@@ -107,15 +110,7 @@ def delete_product(user_id,email):
         print(traceback.format_exc())
         return {"success":False,"message":"Something went wrong"}
 
-@app.route("/products", methods=["GET"])
-def get_products():
-    payload = request.args
-    print(request.host+" "+request.host_url+request.url+" "+request.url_root)
-    filter_by = payload.get("filter_by")
-    filter_by_value = payload.get("filter_by_value")
-    sort_by = payload.get("sort_by")
-    order = payload.get("order")
-    search_query = payload.get("search_query")
+def search_products(filter_by, filter_by_value, sort_by, order, search_query):
     if order and sort_by:
         if order == 'asc':
             sort_by = '+'+sort_by
@@ -142,8 +137,26 @@ def get_products():
         else:
             products = Products.objects().search_text(search_query).order_by(sort_by).to_json()
     products = json.loads(products)
-    return jsonify(products)
+    return products
 
+def fetch_search_products_args(payload):
+    filter_by = payload.get("filter_by")
+    filter_by_value = payload.get("filter_by_value")
+    sort_by = payload.get("sort_by")
+    order = payload.get("order")
+    search_query = payload.get("search_query")
+    return filter_by, filter_by_value, sort_by, order, search_query
+
+def fetch_products(payload):
+    filter_by, filter_by_value, sort_by, order, search_query = fetch_search_products_args(payload)
+    products = search_products(filter_by, filter_by_value, sort_by, order, search_query)
+    return handle_mongoengine_response(products)
+
+@app.route("/products", methods=["GET"])
+def get_products():
+    payload = request.args
+    products = fetch_products(payload)
+    return jsonify(products)
 
 @app.route("/products_chat", methods=["GET"])
 @authorize
@@ -193,6 +206,28 @@ def products_chat(user_id,email):
 
     return jsonify(products)
 
+
+# @authorize_web
+@app.route('/list_products')
+def list_products():
+    try:
+        user_id = session['user_id']
+        email = session['email']
+        html_res = "<html>"
+        products = handle_mongoengine_response(search_products().get_json())
+        for product in products:
+            pname = product['english_name']
+            pid = product['_id']
+            url = url_for("chat.chat")
+            # session['product_id'] = pid
+            html_res+='<a href="%s">'%url+pname+"</a><br>"
+        html_res += "</html>"
+        return html_res
+    except:
+        import traceback
+        print(traceback.format_exc())
+    return ""
+
 def init_chat(buyer_email,buyer_id,seller_id,product_id):
     product_chat = get_or_none(Chats.objects(Q(product_id=ObjectId(product_id)) & Q(seller_id=ObjectId(seller_id)) & Q(
         buyer_id=ObjectId(buyer_id))))
@@ -214,18 +249,36 @@ def init_chat(buyer_email,buyer_id,seller_id,product_id):
     
     #create room with sid as combination of buyer_id, seller_id and product_id and add buyer to the room
     #whenever seller comes online add him to the room
-    room = product_id+"_"+seller_id+"_"+buyer_id
-    session['name'] = buyer_email      
+    print(buyer_email,buyer_id,seller_id,product_id)
+    room = str(product_id)+"_"+str(seller_id)+"_"+str(buyer_id)
+    session['name'] = buyer_email
+    session['room'] = room      
 
     return render_template('chat.html', name=buyer_id, room=room)
 
 
-@app.route("/init_chat", methods=["GET"])
+@app.route("/buy_product", methods=["GET"])
 @authorize
 def chat_product(user_id, email):
-    payload = request.get_json()
-    buyer_id = user_id
-    seller_id = payload.get("seller_id")
-    product_id = payload.get("product_id")
-
-    return init_chat(buyer_id,seller_id,product_id)
+    payload = request.args
+    product_id = None
+    seller_id = None
+    input_product_id = payload.get("product_id")
+    if input_product_id:
+        product_id = input_product_id
+        db = database.product.Get()
+        product_obj = db.get_product_by_id(product_id)
+        if product_obj:
+            seller_id = product_obj.get("seller_id")
+    else:
+        relevant_products = fetch_products(payload)
+        if len(relevant_products) > 0:
+            product_id = str(relevant_products[0].get("_id"))
+            seller_id = relevant_products[0].get("seller_id")
+        else:
+            logging.root.info("Neither product is passed nor a product was found using params!")
+    # logging.root.info()
+    if not product_id or not seller_id:
+        return "Cannot find product_id and/or seller_id"+"Product_id = "+str(product_id)+"Seller_id = "+str(seller_id)
+    print(email, user_id,seller_id, product_id)
+    return init_chat(email, user_id,seller_id, product_id)
