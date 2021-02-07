@@ -4,21 +4,22 @@ from utils.time import get_time_after
 import uuid
 from constants import fields
 from functools import wraps
-from flask import abort,request
+from flask import abort,request, session
 import logging
 def authorize(f):
     @wraps(f)
     def decorated_function(*args, **kws):
             logging.info("request headers are: "+str(request.headers))
-            session_id_field = None
+            session_id = None
             if request.headers.get(fields.SESSION_ID):
-                session_id_field = fields.session_id
+                session_id = request.headers.get(fields.session_id)
             elif request.headers.get("SESSION_ID"):
-                session_id_field = "SESSION_ID"
-            if not session_id_field in request.headers:
+                session_id = request.headers.get("SESSION_ID")
+            elif session.get("SESSION-ID"):
+                session_id = session["SESSION-ID"]
+            if not session_id:
                abort(401)
             try:
-                session_id = request.headers.get(session_id_field)
                 user_session = get_active_session_by_id(session_id)
                 if not user_session:
                     abort(401)

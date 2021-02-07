@@ -116,46 +116,60 @@ def web_login():
             password = form.password.data
             login_response = handle_login(email,password)
             if login_response.get("success",False):
-                session['id'] = login_response[fields.session_id]
-                session['name'] = email
-                return "Login successful"
+                session['SESSION-ID'] = login_response[fields.session_id]
+                session['username'] = email
+                return redirect("list_products")
             else:
                 return login_response.get("message")
     elif request.method == 'GET':
-        session_id = session.get("id")
+        session_id = session.get("SESSION-ID")
         if session_id:
             user_session = get_active_session_by_id(session_id)
             if user_session:
                 return "Already logged in!"
             else:
-                return "Invalid sessionid"
+                session.pop("SESSION-ID")
+                return redirect("web_login")
     return render_template('login.html', form=form)
 
 
-@app.route("/logout")
-@authorize
-def logout(user_id, email):
+def logout_user(session_id):
     response = {
         fields.success: False,
         fields.message: " "
     }
-
-    if not request.headers.get(fields.SESSION_ID):
-        response[fields.message] = "Some of the header fields are missing"
+    n_sessions_updated = UserSessions.objects(session_id=session_id).update_one(set__is_active=False,
+                                                                                set__expireAt=get_time_after(
+                                                                                    days=15))
+    if n_sessions_updated >= 1:
+        response[fields.success] = True
+        response[fields.message] = "User Logged out"
     else:
-        session_id = request.headers.get(fields.SESSION_ID)
-        n_sessions_updated = UserSessions.objects(session_id=session_id).update_one(set__is_active=False,
-                                                                                    set__expireAt=get_time_after(
-                                                                                        days=15))
-        if n_sessions_updated >= 1:
-            response[fields.success] = True
-            response[fields.message] = "User Logged out"
-        else:
-            print("unable to delete user session")
-            response[fields.message] = "Something went wrong"
+        print("unable to delete user session")
+        response[fields.message] = "Something went wrong"
+    return response
+
+@app.route("/logout")
+@authorize
+def logout(user_id, email):
+    
+    session_id = request.headers.get(fields.SESSION_ID)
+    response = logout_user(session_id)
 
     return jsonify(response)
 
+@app.route("/web_logout")
+@authorize
+def web_logout(user_id, email):
+    session_id = session.get("SESSION-ID")
+    response = logout_user(session_id)
+    session.pop("SESSION-ID")
+    return response.get("message")
+
+@app.route("/clear_session")
+def clear_session():
+    session.pop("SESSION-ID")
+    return "Done"
 
 @app.route("/resend_verification_mail")
 @authorize

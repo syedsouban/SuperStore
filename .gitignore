@@ -5,6 +5,5 @@ __pycache__
 .env
 logs
 SuperStore
-database
 logs
 *.rdb

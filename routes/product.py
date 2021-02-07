@@ -20,7 +20,7 @@ import traceback
 import mongoengine
 from utils._json import handle_mongoengine_response
 
-import database
+from database import product
 
 @app.route("/product", methods=["POST"])
 @authorize
@@ -163,7 +163,6 @@ def get_products():
 def products_chat(user_id,email):
     payload = request.args
 
-    print(request.host+" "+request.host_url+request.url+" "+request.url_root)
     # payload = request.get_json() if request.get_json() else {}
     filter_by = payload.get("filter_by")
     filter_by_value = payload.get("filter_by_value")
@@ -207,20 +206,21 @@ def products_chat(user_id,email):
     return jsonify(products)
 
 
-# @authorize_web
+
 @app.route('/list_products')
-def list_products():
+@authorize
+def list_products(user_id, email):
     try:
-        user_id = session['user_id']
-        email = session['email']
+        # user_id = session['user_id']
+        # email = session['email']
         html_res = "<html>"
-        products = handle_mongoengine_response(search_products().get_json())
+        products = handle_mongoengine_response(search_products(None, None, None, None, None))
         for product in products:
             pname = product['english_name']
             pid = product['_id']
-            url = url_for("chat.chat")
+            # url = url_for("chat.chat")
             # session['product_id'] = pid
-            html_res+='<a href="%s">'%url+pname+"</a><br>"
+            html_res+='<a href="buy_product?product_id=%s">'%pid+pname+"</a><br>"
         html_res += "</html>"
         return html_res
     except:
@@ -266,7 +266,7 @@ def chat_product(user_id, email):
     input_product_id = payload.get("product_id")
     if input_product_id:
         product_id = input_product_id
-        db = database.product.Get()
+        db = product.Get()
         product_obj = db.get_product_by_id(product_id)
         if product_obj:
             seller_id = product_obj.get("seller_id")
