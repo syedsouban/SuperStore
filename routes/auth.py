@@ -88,6 +88,7 @@ def handle_login(email, password):
                     response[fields.success] = True
                     response[fields.message] = "Successfully logged in"
                     response[fields.session_id] = new_session[fields.session_id]
+                    response["user_id"] = str(user.id)
                 else:
                     print("unable to store user session for user: " + str(user))
                     response[fields.message] = "Unable to login"

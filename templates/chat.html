@@ -7,21 +7,25 @@
     <script type="text/javascript" charset="utf-8">
         var socket;
         $(document).ready(function() {
+            console.log("SESSION-ID = "+"{{session_id}}")
             socket = io.connect('http://' + document.domain + ':' + location.port + '/socket_io',{
-                query: "SESSION-ID=1f6f6ea0-4017-4ee5-b321-549c617c0496",
+                query: "SESSION-ID={{session_id}}",
                 rememberTransport: false,
                 transports: ['websocket']
             });
             socket.on('connect', function() {
-                socket.emit('joined', {});
+                socket.emit('joined', {chat_id:"{{chat_id}}"});
             });
             socket.on('status', function(data) {
-                $('#chat').val($('#chat').val() + '<' + data.msg + '>\n');
+                console.log("data = "+data.messages)
+                $('#chat').val($('#chat').val() + '<' + data.message + '>\n');
+                $('#chat').val($('#chat').val() + data.messages + '\n');
+                $('#chat').scrollTop($('#chat')[0].scrollHeight);
                 $('#chat').scrollTop($('#chat')[0].scrollHeight);
             });
             socket.on('message', function(data) {
-                console.log("data recieved" + data.msg);
-                $('#chat').val($('#chat').val() + data.msg + '\n');
+                console.log("data recieved" + data.message);
+                $('#chat').val($('#chat').val() + data.message + '\n');
                 $('#chat').scrollTop($('#chat')[0].scrollHeight);
             });
             $('#text').keypress(function(e) {
@@ -30,7 +34,10 @@
                     text = $('#text').val();
                     $('#text').val('');
                     socket.emit('text', {
-                        msg: text
+                        message: text,
+                        chat_id: "{{chat_id}}",
+                        author_id: "{{user_id}}",
+                        author_email: "{{name}}"
                     });
                 }
             });
@@ -49,6 +56,7 @@
 
 <body>
     <h1>Flask-SocketIO-Chat: {{ room }}</h1>
+    <h2>Buyer {{buyer_email}} Seller {{seller_email}} Product {{product_name}}</h2>
     <textarea id="chat" cols="80" rows="20"></textarea><br><br>
     <input id="text" size="80" placeholder="Enter your message here"><br><br>
     <a href="#" onclick="leave_room();">Leave this room</a>

@@ -196,13 +196,6 @@ def products_chat(user_id,email):
             products = Products.objects().search_text(search_query).order_by(sort_by).to_json()
     products = json.loads(products)
 
-    if payload.get("buy_first", False):
-        product = products[0]
-        product_id = product.get("_id").get("$oid")
-        seller_id = product.get("seller_id").get("$oid")    
-        buyer_id = str(user_id)
-        return init_chat(email,buyer_id,seller_id,product_id)
-
     return jsonify(products)
 
 
@@ -220,7 +213,11 @@ def list_products(user_id, email):
             pid = product['_id']
             # url = url_for("chat.chat")
             # session['product_id'] = pid
-            html_res+='<a href="buy_product?product_id=%s">'%pid+pname+"</a><br>"
+            seller_id = product.get("seller_id")
+            print("user_id = ",user_id," seller_id = ",seller_id,user_id==seller_id,type(user_id),type(seller_id))
+            
+            if str(user_id)!=seller_id:
+                html_res+='<a href="init_chat?product_id=%s">'%pid+pname+"</a><br>"
         html_res += "</html>"
         return html_res
     except:
@@ -228,17 +225,24 @@ def list_products(user_id, email):
         print(traceback.format_exc())
     return ""
 
-def init_chat(buyer_email,buyer_id,seller_id,product_id):
+def init_chat(buyer_email,seller_email, buyer_id,seller_id,product_id, product_name):
     product_chat = get_or_none(Chats.objects(Q(product_id=ObjectId(product_id)) & Q(seller_id=ObjectId(seller_id)) & Q(
         buyer_id=ObjectId(buyer_id))))
     payload = {
         "buyer_id":buyer_id,
         "seller_id":seller_id,
-        "product_id":product_id
+        "product_id":product_id,
+        "buyer_email":buyer_email,
+        "seller_name":seller_email,
+        "product_name":product_name
     }
-    if not product_chat:
+    if product_chat:
+        chat_id = product_chat.id
+        print("chatid = chat_id")
+    else:
         try:
             product_chat = Chats(**payload).save()
+            chat_id = product_chat.id
             if not product_chat:
                 print("Unable to save user chat")
                 return {"status":False, "message":"Something went wrong"}
@@ -251,34 +255,36 @@ def init_chat(buyer_email,buyer_id,seller_id,product_id):
     #whenever seller comes online add him to the room
     print(buyer_email,buyer_id,seller_id,product_id)
     room = str(product_id)+"_"+str(seller_id)+"_"+str(buyer_id)
-    session['name'] = buyer_email
-    session['room'] = room      
+    # send user_id, chat_id in response for mobile
+    # session['name'] = buyer_email
+    # session['user_id'] = buyer_id
+    # session['room'] = room      
+    # session_id = session.get("SESSION-ID")
+    # print("session id fetched is: ",session_id)
+    return jsonify({"chat_id":str(chat_id)})
+    # return render_template('chat.html', name=buyer_email,buyer_id = buyer_id, room=room, session_id =session_id, buyer_email = buyer_email,seller_email = seller_email, product_name = product_name, chat_id = chat_id)
 
-    return render_template('chat.html', name=buyer_id, room=room)
 
-
-@app.route("/buy_product", methods=["GET"])
+@app.route("/init_chat", methods=["GET"])
 @authorize
 def chat_product(user_id, email):
     payload = request.args
     product_id = None
     seller_id = None
     input_product_id = payload.get("product_id")
+    buyer_email = email
+    seller_email = None
+    product_name = None
     if input_product_id:
         product_id = input_product_id
         db = product.Get()
         product_obj = db.get_product_by_id(product_id)
         if product_obj:
             seller_id = product_obj.get("seller_id")
-    else:
-        relevant_products = fetch_products(payload)
-        if len(relevant_products) > 0:
-            product_id = str(relevant_products[0].get("_id"))
-            seller_id = relevant_products[0].get("seller_id")
-        else:
-            logging.root.info("Neither product is passed nor a product was found using params!")
+            seller_email = product_obj.get("seller_email")
+            product_name = product_obj.get("english_name")
     # logging.root.info()
-    if not product_id or not seller_id:
+    if not product_id or not seller_id or not buyer_email or not product_name:
         return "Cannot find product_id and/or seller_id"+"Product_id = "+str(product_id)+"Seller_id = "+str(seller_id)
     print(email, user_id,seller_id, product_id)
-    return init_chat(email, user_id,seller_id, product_id)
+    return init_chat(buyer_email, seller_email, user_id,seller_id, product_id, product_name)
