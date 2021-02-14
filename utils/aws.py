@@ -40,9 +40,8 @@ def download_file_from_bucket(bucket_name, s3_key, dst_path):
     bucket = s3_resource.Bucket(bucket_name)
     bucket.download_file(Key=s3_key, Filename=dst_path)
 
-def upload_image(request):
-    file = request.files['photo']
-    filename = photos.save(file)
+def upload_image(image):
+    filename = photos.save(image)
     # s3_bucket = make_bucket(os.getenv('S3_IMAGES_BUCKET'), 'public-read')
     image_url = upload_file_to_bucket(os.getenv('S3_IMAGES_BUCKET'), filename)
     return image_url

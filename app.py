@@ -36,7 +36,7 @@ app.logger.setLevel(logging.DEBUG)
 import arrow
 
 from logging.handlers import TimedRotatingFileHandler
-logname = "SuperStore.log"
+logname = "logs/SuperStore.log"
 handler = TimedRotatingFileHandler(logname, when="D", interval=1)
 logging.root.handlers.append(handler)
 logging.root.setLevel(logging.INFO)
