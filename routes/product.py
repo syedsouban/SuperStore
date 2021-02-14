@@ -30,8 +30,18 @@ def create_product(user_id,email):
     if payload.get("tags"):
         payload["tags"] = payload["tags"].split(",")
     try:
-        if request.method == 'POST' and 'photo' in request.files:
-            payload["image_url"] = upload_image(request)        
+        if request.method == 'POST' and ('english_images[]' in request.files or 'english_images[]' in request.files):
+            arabic_images = request.files.getlist("arabic_images[]")
+            english_names = request.files.getlist("english_names[]")
+            arabic_image_urls = []
+            english_image_urls = []
+            for image in arabic_images:
+                arabic_image_urls.append(upload_image(image))
+            for image in english_images:
+                english_image_urls.append(upload_image(image))
+            payload["arabic_image_urls"] = arabic_image_urls
+            payload["english_image_urls"] = english_image_urls
+            payload["image_url"] = english_image_urls[0]
         else:
             return {"success":False,"message":"Product image missing"}    
         payload["seller_id"] = ObjectId(user_id)
