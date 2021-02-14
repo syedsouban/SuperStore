@@ -49,7 +49,10 @@ logging.root.setLevel(logging.INFO)
     # consoleHandler.setFormatter(logFormatter)
 #rootLogger.addHandler(consoleHandler)
 #logging.root.setLevel(logging.INFO)
-app.config['UPLOADED_PHOTOS_DEST'] = os.getcwd()
+UPLOAD_FOLDER = 'static/upload'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+app.config['UPLOADED_PHOTOS_DEST'] = UPLOAD_FOLDER
 photos = UploadSet('photos', IMAGES)
 configure_uploads(app, photos)
 

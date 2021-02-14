@@ -1,3 +1,4 @@
+from app import app
 from app import photos
 from dotenv import load_dotenv
 import os
@@ -41,7 +42,14 @@ def download_file_from_bucket(bucket_name, s3_key, dst_path):
     bucket.download_file(Key=s3_key, Filename=dst_path)
 
 def upload_image(image):
-    filename = photos.save(image)
-    # s3_bucket = make_bucket(os.getenv('S3_IMAGES_BUCKET'), 'public-read')
-    image_url = upload_file_to_bucket(os.getenv('S3_IMAGES_BUCKET'), filename)
-    return image_url
+    if image.filename:
+        # filename = image.save(os.path.join(app.config['UPLOAD_FOLDER'], image.filename))
+        filename = os.path.join(app.config['UPLOAD_FOLDER'], photos.save(image))
+        # s3_bucket = make_bucket(os.getenv('S3_IMAGES_BUCKET'), 'public-read')
+        image_url = upload_file_to_bucket(os.getenv('S3_IMAGES_BUCKET'), filename)
+        if image_url:
+            os.remove(filename)
+        return image_url
+    else:
+        return None
+    

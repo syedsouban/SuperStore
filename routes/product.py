@@ -32,13 +32,17 @@ def create_product(user_id,email):
     try:
         if request.method == 'POST' and ('english_images[]' in request.files or 'english_images[]' in request.files):
             arabic_images = request.files.getlist("arabic_images[]")
-            english_names = request.files.getlist("english_names[]")
+            english_images = request.files.getlist("english_images[]")
             arabic_image_urls = []
             english_image_urls = []
             for image in arabic_images:
-                arabic_image_urls.append(upload_image(image))
+                url = upload_image(image)
+                if url:
+                    arabic_image_urls.append(url)
             for image in english_images:
-                english_image_urls.append(upload_image(image))
+                url = upload_image(image)
+                if url:
+                    english_image_urls.append(url)
             payload["arabic_image_urls"] = arabic_image_urls
             payload["english_image_urls"] = english_image_urls
             payload["image_url"] = english_image_urls[0]

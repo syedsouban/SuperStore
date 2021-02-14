@@ -19,3 +19,4 @@ python-dotenv
 gevent
 arrow
 pytz
+flask_session
