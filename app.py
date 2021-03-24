@@ -10,7 +10,7 @@ import os
 
 from flask import Flask
 from flask.wrappers import Response
-from flask_uploads import UploadSet, IMAGES, configure_uploads
+from flask_uploads import UploadSet, configure_uploads, IMAGES
 import logging
 
 app = Flask(__name__)
@@ -53,7 +53,7 @@ UPLOAD_FOLDER = 'static/upload'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 app.config['UPLOADED_PHOTOS_DEST'] = UPLOAD_FOLDER
-photos = UploadSet('photos', IMAGES)
+photos = UploadSet('photos', ['pdf','png', 'jpeg','jpg','webp'])
 configure_uploads(app, photos)
 
 @app.before_request
@@ -71,9 +71,11 @@ def log_request_info():
         del request_body["password"]
     if not request_body and request.form:
         logging.info('Body: %s', str(request.form))    
+        print('Body: %s', str(request.form))    
         if request.files:
-            logging.info('Request file: %s', str(request.files))    
+            print('Request file: %s', str(request.files))    
     logging.info('Body: %s', json.dumps(request_body))
+    print('Body: %s', json.dumps(request_body))
 
 @app.after_request
 def after_request_func(response):
@@ -91,6 +93,7 @@ def root():
 from routes import auth
 from routes import category
 from routes import product
+from routes import user
 import eventlet
 eventlet.monkey_patch()
 from flask_socketio import SocketIO

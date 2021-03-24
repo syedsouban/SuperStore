@@ -19,6 +19,7 @@ from utils.aws import upload_image
 import traceback
 import mongoengine
 from utils._json import handle_mongoengine_response
+from utils.response import create_failure_response, create_success_response
 
 from database import product
 
@@ -27,27 +28,32 @@ from database import product
 def create_product(user_id,email):
     # payload = request.get_json()
     payload = request.form.to_dict()
+    is_arabic_image_same = bool(payload.get("is_arabic_image_same", False))
+    # print("typeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee!"+str(type(is_arabic_image_same)))
     if payload.get("tags"):
         payload["tags"] = payload["tags"].split(",")
     try:
-        if request.method == 'POST' and ('english_images[]' in request.files or 'english_images[]' in request.files):
-            arabic_images = request.files.getlist("arabic_images[]")
+        if request.method == 'POST' and ('english_images[]' in request.files):
             english_images = request.files.getlist("english_images[]")
+            arabic_images = request.files.getlist("arabic_images[]")
+            
             arabic_image_urls = []
             english_image_urls = []
-            for image in arabic_images:
-                url = upload_image(image)
-                if url:
-                    arabic_image_urls.append(url)
+            if not is_arabic_image_same:
+                for image in arabic_images:
+                    url = upload_image(image)
+                    if url:
+                        arabic_image_urls.append(url)
+            
             for image in english_images:
                 url = upload_image(image)
                 if url:
-                    english_image_urls.append(url)
-            payload["arabic_image_urls"] = arabic_image_urls
+                    english_image_urls.append(url)    
+            payload["arabic_image_urls"] = english_image_urls if is_arabic_image_same else arabic_image_urls
             payload["english_image_urls"] = english_image_urls
             payload["image_url"] = english_image_urls[0]
         else:
-            return {"success":False,"message":"Product image missing"}    
+            return create_failure_response("Product image missing")    
         payload["seller_id"] = ObjectId(user_id)
         if payload.get("category_id"):
             payload["category_id"] = ObjectId(payload["category_id"])
@@ -56,16 +62,16 @@ def create_product(user_id,email):
         if inserted:
             return {"success":True,"message":"Product created successfully","product_id":str(inserted.id)}
         else:
-            return {"success":False,"message":"Something went wrong"}
+            return create_failure_response("Something went wrong")
     except pymongo.errors.WriteError:
         print(traceback.format_exc())
-        return {"success":False,"message":"Some or all the fields were not present"}
+        return create_failure_response("Some or all the fields were not present")
     except mongoengine.errors.NotUniqueError:
         print(traceback.format_exc())
-        return {"success":False,"message":"Product with the same name already exists"}
+        return create_failure_response("Product with the same name already exists")
     except:
         print(traceback.format_exc())
-        return {"success":False,"message":"Something went wrong"}
+        return create_failure_response("Something went wrong")
 
 @app.route("/product", methods=["GET"])
 def get_product():
@@ -100,12 +106,12 @@ def update_product(user_id,email):
         updated_product = Products.objects.filter(id=ObjectId(product_id)).update(**new_product)
 
         if updated_product:
-            return {"success":True,"message":"Product updated successfully"}
+            return create_success_response("Product updated successfully")
         else:
-            return {"success":False,"message":"Something went wrong"}
+            return create_failure_response("Something went wrong")
     except:
         print(traceback.format_exc())
-        return {"success":False,"message":"Something went wrong"}
+        return create_failure_response("Something went wrong")
 
 @app.route("/product", methods=["DELETE"])
 @authorize
@@ -117,12 +123,12 @@ def delete_product(user_id,email):
         # updated_category = Categories.objects.filter(id=ObjectId(category_id)).update(**document)
         deleted_product = Products.objects(id=ObjectId(product_id)).delete()
         if deleted_product >=1 :
-            return {"success":True,"message":"Product deleted successfully"}
+            return create_success_response("Product deleted successfully")
         else:
-            return {"success":False,"message":"Something went wrong"}
+            return create_failure_response("Something went wrong")
     except:
         print(traceback.format_exc())
-        return {"success":False,"message":"Something went wrong"}
+        return create_failure_response("Something went wrong")
 
 def search_products(filter_by, filter_by_value, sort_by, order, search_query):
     if order and sort_by:
@@ -135,16 +141,19 @@ def search_products(filter_by, filter_by_value, sort_by, order, search_query):
     else:
         sort_by = 'created_at'
     if filter_by and filter_by_value:
-        category_id = get_or_none(Categories.objects(**{filter_by.replace('category_',''):filter_by_value})).id
-        if category_id:
-            category_id = ObjectId(category_id)
-            queries = Q(**{"category_id":category_id})
-            if not search_query:
-                products = Products.objects(queries).order_by(sort_by).to_json()    
+        if 'category' in filter_by:
+            category_id = get_or_none(Categories.objects(**{filter_by.replace('category_',''):filter_by_value})).id
+            if category_id:
+                category_id = ObjectId(category_id)
+                queries = Q(**{"category_id":category_id})
+                if not search_query:
+                    products = Products.objects(queries).order_by(sort_by).to_json()    
+                else:
+                    products = Products.objects(queries).search_text(search_query).order_by(sort_by).to_json()
             else:
-                products = Products.objects(queries).search_text(search_query).order_by(sort_by).to_json()
+                return []
         else:
-            return []
+            products = Products.objects(**{filter_by:filter_by_value}).to_json()
     else:
         if not search_query:
             products = Products.objects().order_by(sort_by).to_json()
@@ -176,7 +185,7 @@ def get_products():
 @authorize
 def products_chat(user_id,email):
     payload = request.args
-
+    print("payload"+json.dumps(payload))
     # payload = request.get_json() if request.get_json() else {}
     filter_by = payload.get("filter_by")
     filter_by_value = payload.get("filter_by_value")
@@ -192,17 +201,21 @@ def products_chat(user_id,email):
             print("Improper sort order sent")
     else:
         sort_by = 'created_at'
+    
     if filter_by and filter_by_value:
-        category_id = get_or_none(Categories.objects(**{filter_by.replace('category_',''):filter_by_value})).id
-        if category_id:
-            category_id = ObjectId(category_id)
-            queries = Q(**{"category_id":category_id})
-            if not search_query:
-                products = Products.objects(queries).order_by(sort_by).to_json()    
+        if 'category' in filter_by:
+            category_id = get_or_none(Categories.objects(**{filter_by.replace('category_',''):filter_by_value})).id
+            if category_id:
+                category_id = ObjectId(category_id)
+                queries = Q(**{"category_id":category_id})
+                if not search_query:
+                    products = Products.objects(queries).order_by(sort_by).to_json()    
+                else:
+                    products = Products.objects(queries).search_text(search_query).order_by(sort_by).to_json()
             else:
-                products = Products.objects(queries).search_text(search_query).order_by(sort_by).to_json()
+                return []
         else:
-            return []
+            products = Products.objects(**{filter_by:filter_by_value})
     else:
         if not search_query:
             products = Products.objects().order_by(sort_by).to_json()

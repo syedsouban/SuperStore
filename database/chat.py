@@ -37,7 +37,6 @@ class Get:
                     {"$group":{"_id":"$chat_id","messages":{"$push":"$$ROOT"}}},
                     {"$project":{"messages":{"$slice":["$messages", 1]}}}]
                     agg_obj = list(Messages.objects().aggregate(pipeline))
-                    print(str(agg_obj))
                     latest_message = agg_obj[0].get("messages",[]) if len(agg_obj) > 0 else []
                     latest_message = latest_message[0] if len(latest_message)>0 else {}
                     chat_obj["latest_message"] = handle_mongoengine_json(latest_message)

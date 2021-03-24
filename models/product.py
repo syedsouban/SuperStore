@@ -19,8 +19,10 @@ class Products(db.DynamicDocument):
     FAQs_english = db.ListField()
     tags = db.ListField(required = True)
     status = db.StringField(required = True)
+    city = db.StringField(required = True)
     created_date = db.DateTimeField()
     updated_date = db.DateTimeField()
+    
 
     meta = {'indexes': [
         {'fields': ['$english_name', "$english_description", "$tag"],

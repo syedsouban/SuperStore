@@ -4,14 +4,28 @@ from utils.time import get_time_after
 from datetime import datetime
 import uuid
 
+class CartItem(db.EmbeddedDocument):
+    product_id = db.StringField(required = True)
+    price = db.FloatField(required = True)
+    quantity = db.IntField()
+    cart_type = db.StringField(required = True)
+
 class Users(db.DynamicDocument):
-    
+    first_name = db.StringField(required = True)
+    last_name = db.StringField(required = True)
+    address = db.StringField()
+    profile_pic = db.StringField()
+    id_proof = db.StringField()
+    is_id_verified = db.BooleanField()
     email = db.EmailField(required = True,unique =True)
     created_at = db.DateTimeField(required = True)
     email_verified = db.BooleanField(required=True)
     verification_token = db.StringField(required = True)
     verification_token_expiry = db.DateTimeField(required = True)
     password_hash = db.StringField(required = True)
+    city = db.StringField(required = True)
+    cart = db.ListField(db.EmbeddedDocumentField(CartItem))
+
 
     @staticmethod
     def create_token():

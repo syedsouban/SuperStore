@@ -21,6 +21,7 @@ from constants import fields
 from flask import  request, session, render_template, redirect, url_for
 from constants import fields
 from forms.forms import SigninForm
+from utils.response import *
 
 @app.route("/", methods=["GET"])
 def hello():
@@ -33,20 +34,18 @@ def is_strong(password):
 
 @app.route("/register", methods=["POST"])
 def register_api():
-    response = {
-        fields.success: False,
-        fields.message: "Something went wrong"
-    }
+    response = get_default_response()
     try:
         password = request.get_json().get(fields.password)
         email = request.get_json().get(fields.email)
-
-        if email is None or password is None:
-            response[fields.message] = "Email or password fields are empty"
+        city = request.get_json().get(fields.city)
+        first_name = request.get_json().get(fields.first_name)
+        last_name = request.get_json().get(fields.last_name)
+        if email is None or password is None or city is None or first_name is None or last_name is None:
+            response[fields.message] = "Some of the fields are empty"
             return jsonify(response)
         if not is_strong(password):
-            response[
-                fields.message] = "Password should contain at least one small letter, one capital letter, one number " \
+            response[fields.message] = "Password should contain at least one small letter, one capital letter, one number " \
                                   "and one special symbol! "
             return response
         existing_user = get_or_none(Users.objects(email=email))

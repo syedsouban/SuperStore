@@ -5,6 +5,8 @@ from app import db
 
 class Messages(db.DynamicDocument):
     chat_id = db.LazyReferenceField(Chats, required = True,dbref = False,reverse_delete_rule = CASCADE)
-    message = db.StringField(required=True)
+    receipt = db.DictField()
+    text = db.StringField()
+    message_type = db.StringField(required = True)
     author_id = db.LazyReferenceField(Users, required = True,dbref = False,reverse_delete_rule = CASCADE)
     timestamp = db.DateTimeField()
