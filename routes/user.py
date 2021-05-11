@@ -10,6 +10,7 @@ import traceback
 from utils.aws import upload_image
 from database.product import Get
 from utils.response import create_failure_response, create_success_response
+from database.user import Get as UserDb
 
 @app.route("/user", methods=["GET"])
 def get_user():
@@ -21,14 +22,12 @@ def get_user():
         response["message"] = "User id missing"
     else:
         try:
-            user = Users.objects(id=ObjectId(user_id)).first()
-            if user:
-                response = json.loads(user.to_json())
-                response.pop("password_hash")
-                response.pop("verification_token")
-            else:
+            db = UserDb()
+            user = db.get_user_by_id(user_id)
+            if not user:
                 response["success"] = False
                 response["message"] = "user not found"
+            response = user
         except bson.errors.InvalidId:
             response["success"] = False
             response["message"] = "Improper user id passed"
@@ -40,11 +39,10 @@ def get_user():
 def updated_user(user_id,email):
     
     try:
-        payload = request.form.to_dict() if request.form else request.get_json()    
+        payload = request.get_json() if request.get_json() else request.form.to_dict()    
         # user_id = payload.pop("user_id")
         if request.method == 'PATCH' and 'document' in request.files:
             payload["document_url"] = upload_image(request.files['document'])
-        print("payload=====================>"+json.dumps(payload))
         updated_user = Users.objects.filter(id=ObjectId(user_id)).update(**payload)
         
         if updated_user:
@@ -70,12 +68,17 @@ def updated_user(user_id,email):
 def add_product_to_cart(user_id, email):
     try:
         payload = request.get_json()
-        input_quantity = int(payload.get("quantity"))
-        input_price = float(payload.get("price"))
+        input_quantity = None
+        input_price = None
+        if payload.get("quantity"):
+            input_quantity = int(payload.get("quantity"))
+        if payload.get("quantity"):
+            input_price = float(payload.get("price"))
         product_id = payload.get("product_id","")
         if product_id:
             db = Get()
             product = db.get_product_by_id(product_id)
+            seller_id = product.get("seller_id")
             if not product:
                 return {"success":False, "message":"Invalid product details"}
             product_price = product.get("price")
@@ -83,7 +86,13 @@ def add_product_to_cart(user_id, email):
             user = json.loads(Users.objects(id=ObjectId(user_id)).first().to_json())
             
             user_cart = user.get("cart",[])
-
+            if len(user_cart) > 0:
+                first_product_id = user_cart[0].get("product_id")
+                first_product = db.get_product_by_id(first_product_id)
+                first_seller_id = first_product.get("seller_id")
+                if first_seller_id != seller_id:
+                    return create_failure_response("Cart has products from a different seller! Clear the cart to add products from this seller.")
+                
             if input_price < product_price:
                 for cart in user_cart:
                     # we can add a secret key check to ensure that nobody can add things to cart with lesser product price without following the receipt workflow
@@ -155,8 +164,6 @@ def delete_from_cart(user_id, email):
         return create_failure_response("Something went wrong")
 
 
-
-
 @app.route("/add_receipt", methods=["POST"])
 @authorize
 def add_receipt_to_buyer(user_id, email):
@@ -191,3 +198,10 @@ def add_receipt_to_buyer(user_id, email):
     except:
         print(traceback.format_exc())
         return create_failure_response("Something went wrong")
+
+@app.route("/cart", methods = ["GET"])
+@authorize
+def get_cart(user_id, email):
+    db = UserDb()
+    cart = db.get_cart_by_user_id(user_id)
+    return jsonify(cart)

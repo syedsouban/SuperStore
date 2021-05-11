@@ -3,6 +3,8 @@ from werkzeug.security import check_password_hash, generate_password_hash as gen
 from utils.time import get_time_after
 from datetime import datetime
 import uuid
+from models.address import Address
+
 
 class CartItem(db.EmbeddedDocument):
     product_id = db.StringField(required = True)
@@ -25,6 +27,7 @@ class Users(db.DynamicDocument):
     password_hash = db.StringField(required = True)
     city = db.StringField(required = True)
     cart = db.ListField(db.EmbeddedDocumentField(CartItem))
+    addresses = db.ListField(db.EmbeddedDocumentField(Address))
 
 
     @staticmethod

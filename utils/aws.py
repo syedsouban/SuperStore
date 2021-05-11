@@ -3,6 +3,7 @@ from app import photos
 from dotenv import load_dotenv
 import os
 import boto3
+import traceback
 
 load_dotenv(verbose=True)
 
@@ -42,15 +43,16 @@ def download_file_from_bucket(bucket_name, s3_key, dst_path):
     bucket.download_file(Key=s3_key, Filename=dst_path)
 
 def upload_image(image):
-    if image.filename:
-        print("image name ===================>"+image.filename)
-        # filename = image.save(os.path.join(app.config['UPLOAD_FOLDER'], image.filename))
-        filename = os.path.join(app.config['UPLOAD_FOLDER'], photos.save(image))
-        # s3_bucket = make_bucket(os.getenv('S3_IMAGES_BUCKET'), 'public-read')
-        image_url = upload_file_to_bucket(os.getenv('S3_IMAGES_BUCKET'), filename)
-        if image_url:
-            os.remove(filename)
-        return image_url
-    else:
-        return None
+    try:
+        if image.filename:
+            # filename = image.save(os.path.join(app.config['UPLOAD_FOLDER'], image.filename))
+            filename = os.path.join(app.config['UPLOAD_FOLDER'], photos.save(image))
+            # s3_bucket = make_bucket(os.getenv('S3_IMAGES_BUCKET'), 'public-read')
+            image_url = upload_file_to_bucket(os.getenv('S3_IMAGES_BUCKET'), filename)
+            if image_url:
+                os.remove(filename)
+            return image_url
+    except:
+        print("exception occured while upload image: "+traceback.format_exc())
+    return None
     

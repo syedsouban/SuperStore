@@ -7,11 +7,12 @@ import json
 class Get:
     def __init__(self):
         pass
-    def get_product_by_id(self, product_id):
+    def get_product_by_id(self, product_id, fetch_seller = True):
         product = Products.objects(id=ObjectId(product_id)).first()
-        seller_obj = product.seller_id.fetch()
         product_json = json.loads(product.to_json())
-        product_json.update({"seller_email":seller_obj.email})
+        if not fetch_seller:
+            seller_obj = product.seller_id.fetch()
+            product_json.update({"seller_email":seller_obj.email})
         return handle_mongoengine_json(product_json)
     
         

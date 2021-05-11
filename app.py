@@ -5,7 +5,8 @@ from flask_pymongo import PyMongo
 from flask_mongoengine import MongoEngine
 from flask import Response
 from utils._json import handle_mongoengine_response
-from flask_socketio import SocketIO
+
+
 import os
 
 from flask import Flask
@@ -13,10 +14,18 @@ from flask.wrappers import Response
 from flask_uploads import UploadSet, configure_uploads, IMAGES
 import logging
 
+disable_socketio = os.environ.get("disable_socketio") == "true"
+
+
+if not disable_socketio:
+    from flask_socketio import SocketIO
+
 app = Flask(__name__)
 
 app.config["SECRET_KEY"] = "5d8b7997-de22-49a0-b76f-87da47d5b2ab"
 app.config["MONGO_URI"] = "mongodb://127.0.0.1:27017/superStoreDb"
+
+
 
 app.config['MONGODB_SETTINGS'] = {
     'db': 'superStoreDb',
@@ -94,27 +103,32 @@ from routes import auth
 from routes import category
 from routes import product
 from routes import user
-import eventlet
-eventlet.monkey_patch()
-from flask_socketio import SocketIO
 from flask_session import Session
 
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
+if not disable_socketio:
+    import eventlet
+    eventlet.monkey_patch()
+    from flask_socketio import SocketIO
+
 # socketio = SocketIO(logger=True,engineio_logger=True,cors_allowed_origins='*',message_queue='redis://127.0.0.1:6379')
-socketio = SocketIO(cors_allowed_origins='*', manage_session=False)
-socketio.init_app(app,message_queue='redis://')
+    socketio = SocketIO(cors_allowed_origins='*', manage_session=False)
+    socketio.init_app(app,message_queue='redis://')
+    from events import events
+
+    @socketio.on_error_default  # handles all namespaces without an explicit error handler
+    def default_error_handler(e):
+        print("SocketIO Error has occured: "+str(e))
+
+    if __name__ == "__main__":
+        socketio.run(app)
+
 
 from routes import chat
 app.register_blueprint(chat.bp)
-from events import events
 
-@socketio.on_error_default  # handles all namespaces without an explicit error handler
-def default_error_handler(e):
-    print("SocketIO Error has occured: "+str(e))
 
-if __name__ == "__main__":
-    socketio.run(app)
 
 # db = app.mongo.db
 
