@@ -61,7 +61,7 @@ def register_api():
             host = get_host(request)
             response[fields.success] = True
             response[fields.message] = "Successfully registered the user"
-            response[fields.user_id] = user.id
+            response[fields.user_id] = str(user.id)
             send_verification_mail(host, email, user.verification_token)
             response = json.loads(json_util.dumps(response))
         else:

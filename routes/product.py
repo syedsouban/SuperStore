@@ -3,6 +3,7 @@ import json
 from flask.globals import session
 import logging
 from flask.templating import render_template
+from mongoengine.queryset.transform import query
 from models.chat import Chats
 from models.category import Categories
 import bson
@@ -29,13 +30,13 @@ def create_product(user_id,email):
     # payload = request.get_json()
     payload = request.form.to_dict()
     is_arabic_image_same = bool(payload.get("is_arabic_image_same", False))
-    # print("typeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee!"+str(type(is_arabic_image_same)))
     if payload.get("tags"):
         payload["tags"] = payload["tags"].split(",")
     try:
         if request.method == 'POST' and ('english_images[]' in request.files):
             english_images = request.files.getlist("english_images[]")
             arabic_images = request.files.getlist("arabic_images[]")
+            print(str(english_images)+" "+str(arabic_images))
             
             arabic_image_urls = []
             english_image_urls = []
@@ -48,13 +49,14 @@ def create_product(user_id,email):
             for image in english_images:
                 url = upload_image(image)
                 if url:
-                    english_image_urls.append(url)    
+                    english_image_urls.append(url)
             payload["arabic_image_urls"] = english_image_urls if is_arabic_image_same else arabic_image_urls
             payload["english_image_urls"] = english_image_urls
-            payload["image_url"] = english_image_urls[0]
+            payload["image_url"] = english_image_urls[0] if len(english_image_urls) > 0 else None
         else:
             return create_failure_response("Product image missing")    
         payload["seller_id"] = ObjectId(user_id)
+        payload["status"] = "pending"
         if payload.get("category_id"):
             payload["category_id"] = ObjectId(payload["category_id"])
         payload = create_who_columns(email=email,payload=payload)
@@ -103,8 +105,11 @@ def update_product(user_id,email):
         new_product = get_update_dict(payload)
         new_product["updated_by"] = email
         new_product["updated_date"] = datetime.now()
+        status = payload.get("status")
+        if status and status in ["pending", "approved", "rejected"]:
+            new_product["status"] = status
         updated_product = Products.objects.filter(id=ObjectId(product_id)).update(**new_product)
-
+        
         if updated_product:
             return create_success_response("Product updated successfully")
         else:
@@ -122,7 +127,7 @@ def delete_product(user_id,email):
         # document = create_fields_for_deletion(email)
         # updated_category = Categories.objects.filter(id=ObjectId(category_id)).update(**document)
         deleted_product = Products.objects(id=ObjectId(product_id)).delete()
-        if deleted_product >=1 :
+        if deleted_product >=1:
             return create_success_response("Product deleted successfully")
         else:
             return create_failure_response("Something went wrong")
@@ -130,7 +135,7 @@ def delete_product(user_id,email):
         print(traceback.format_exc())
         return create_failure_response("Something went wrong")
 
-def search_products(filter_by, filter_by_value, sort_by, order, search_query):
+def search_products(filter_by, filter_by_value, sort_by, order, search_query, debug = False):
     if order and sort_by:
         if order == 'asc':
             sort_by = '+'+sort_by
@@ -140,12 +145,16 @@ def search_products(filter_by, filter_by_value, sort_by, order, search_query):
             print("Improper sort order sent")
     else:
         sort_by = 'created_at'
+    
+    query_dict = {"status":"approved"} if not debug else {}
+    
     if filter_by and filter_by_value:
         if 'category' in filter_by:
             category_id = get_or_none(Categories.objects(**{filter_by.replace('category_',''):filter_by_value})).id
             if category_id:
                 category_id = ObjectId(category_id)
-                queries = Q(**{"category_id":category_id})
+                query_dict.update({"category_id":category_id})
+                queries = Q(**query_dict)
                 if not search_query:
                     products = Products.objects(queries).order_by(sort_by).to_json()    
                 else:
@@ -153,12 +162,13 @@ def search_products(filter_by, filter_by_value, sort_by, order, search_query):
             else:
                 return []
         else:
-            products = Products.objects(**{filter_by:filter_by_value}).to_json()
+            query_dict.update({filter_by:filter_by_value})
+            products = Products.objects(**query_dict).to_json()
     else:
         if not search_query:
-            products = Products.objects().order_by(sort_by).to_json()
+            products = Products.objects(Q(**query_dict)).order_by(sort_by).to_json()
         else:
-            products = Products.objects().search_text(search_query).order_by(sort_by).to_json()
+            products = Products.objects(Q(**query_dict)).search_text(search_query).order_by(sort_by).to_json()
     products = json.loads(products)
     return products
 
@@ -172,7 +182,7 @@ def fetch_search_products_args(payload):
 
 def fetch_products(payload):
     filter_by, filter_by_value, sort_by, order, search_query = fetch_search_products_args(payload)
-    products = search_products(filter_by, filter_by_value, sort_by, order, search_query)
+    products = search_products(filter_by, filter_by_value, sort_by, order, search_query, debug = payload.get("debug"))
     return handle_mongoengine_response(products)
 
 @app.route("/products", methods=["GET"])

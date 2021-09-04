@@ -103,6 +103,7 @@ from routes import auth
 from routes import category
 from routes import product
 from routes import user
+from routes import order
 from flask_session import Session
 
 app.config['SESSION_TYPE'] = 'filesystem'

@@ -33,6 +33,21 @@ def get_user():
             response["message"] = "Improper user id passed"
     return jsonify(response)
 
+@app.route("/logged_in_user", methods=["GET"])
+@authorize
+def get_logged_in_user(user_id, email):
+    response = {}
+    try:
+        db = UserDb()
+        user = db.get_user_by_id(user_id)
+        if not user:
+            response["success"] = False
+            response["message"] = "user not found"
+        response = user
+    except bson.errors.InvalidId:
+        response["success"] = False
+        response["message"] = "Improper user id passed"
+    return jsonify(response)
 
 @app.route("/user", methods=["PATCH"])
 @authorize
@@ -72,7 +87,7 @@ def add_product_to_cart(user_id, email):
         input_price = None
         if payload.get("quantity"):
             input_quantity = int(payload.get("quantity"))
-        if payload.get("quantity"):
+        if payload.get("price"):
             input_price = float(payload.get("price"))
         product_id = payload.get("product_id","")
         if product_id:
@@ -86,12 +101,12 @@ def add_product_to_cart(user_id, email):
             user = json.loads(Users.objects(id=ObjectId(user_id)).first().to_json())
             
             user_cart = user.get("cart",[])
-            if len(user_cart) > 0:
-                first_product_id = user_cart[0].get("product_id")
-                first_product = db.get_product_by_id(first_product_id)
-                first_seller_id = first_product.get("seller_id")
-                if first_seller_id != seller_id:
-                    return create_failure_response("Cart has products from a different seller! Clear the cart to add products from this seller.")
+            # if len(user_cart) > 0:
+            #     first_product_id = user_cart[0].get("product_id")
+            #     first_product = db.get_product_by_id(first_product_id)
+            #     first_seller_id = first_product.get("seller_id")
+            #     # if first_seller_id != seller_id:
+            #     #     return create_failure_response("Cart has products from a different seller! Clear the cart to add products from this seller.")
                 
             if input_price < product_price:
                 for cart in user_cart:
@@ -103,7 +118,7 @@ def add_product_to_cart(user_id, email):
                 cart_updated = False
                 for i in range(len(user_cart)):
                     if user_cart[i].get("price") == input_price and user_cart[i].get("product_id") == product_id:
-                        user_cart[i].update({"quantity":user_cart[i].get("quantity")+1, "cart_type":"non_receipt"})
+                        user_cart[i].update({"price":user_cart[i].get("price"),"quantity":user_cart[i].get("quantity")+1, "cart_type":"non_receipt"})
                         cart_updated = True
                 if not cart_updated:
                     user_cart.append({"price":input_price if input_price else product.get("price"), "quantity": 1, "product_id": product_id, "cart_type":"non_receipt"})
